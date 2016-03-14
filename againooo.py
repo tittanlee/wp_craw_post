@@ -7,6 +7,7 @@ from PIL import Image
 from resizeimage import resizeimage
 
 from auto_post import *
+import shutil
 
 class againooo:
 
@@ -21,31 +22,41 @@ class againooo:
     art_title = soup.title.text
     art_content = soup.find('div', class_="Content_post")
 
-    content = str(art_content)
+    content_string = str(art_content)
 
     # Remove google ad.
-    if 'google' in content:
+    if 'google' in content_string:
       for ads_google in art_content.find_all('div', class_ = 'centerBlock'):
         ads_google.decompose()
 
     # replace img class setting.
-    if 'img' in content:
+    if 'img' in content_string:
       for img in art_content.find_all('img'):
-        img['align'] = 'middle'
+        img['class'] = 'aligncenter'
         img['src'] = self.img_server_url + img['adonis-src']
+        img['height'] = 360
+        img['width']  = 620
         del img['adonis-src']
-        del img['class']
 
       # download thumb image.
+      if os.path.exists(self.dir_name):
+        shutil.rmtree(self.dir_name)
+
       thumb_jpg_path        = './' + self.dir_name + '/temp_thumb.jpg'
       os.mkdir(self.dir_name)
       status = self.download_image(art_content.img['src'], thumb_jpg_path)
       if (status == 'FAILED'):
-        os.removedirs(self.dir_name)
+        shutil.rmtree(self.dir_name)
         return
 
       self.resize_image(thumb_jpg_path)
       os.remove(thumb_jpg_path)
+
+    if '<iframe' in content_string:
+      iframe = art_content.find('iframe')
+      iframe['height'] = 360
+      iframe['width']  = 620
+
     
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
     if os.path.exists(resize_thumb_jpg_path):
@@ -71,15 +82,9 @@ class againooo:
 
 def main():
 
-  # url = sys.argv[1]
-
-  url = 'http://againooo.com/%s/'
+  url = sys.argv[1]
   craw = againooo()
-
-  for num in range(45280, 45999, 3):
-    temp = (url %(num))
-    print(temp)
-    craw.get_content(temp)
+  craw.get_content(url)
 
 
 

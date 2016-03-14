@@ -3,7 +3,7 @@ from wordpress_xmlrpc.methods.posts import GetPosts, NewPost, EditPost
 from wordpress_xmlrpc.methods.users import GetUserInfo
 from wordpress_xmlrpc.methods.media import *
 
-
+import uuid
 
 
 class WordPress:
@@ -16,17 +16,16 @@ class WordPress:
     self.post.title   = title
     self.post.content = content
 
-    self.post.id      = self.wp.call(NewPost(self.post))
-
     attachment_id         = self._upload_thumbnail(thumbnail_path)
     self.post.thumbnail   = attachment_id
     self.post.post_status = 'publish'
    
-    self.wp.call(EditPost(self.post.id, self.post))
+    # self.wp.call(EditPost(self.post.id, self.post))
+    self.post.id      = self.wp.call(NewPost(self.post))
 
   def _upload_thumbnail(self, img_filepath):
     # prepare metadata
-    thumb_name = self.post.id + '.jpg'
+    thumb_name = str(uuid.uuid4()) + '.jpg'
     data = {
             'name': thumb_name ,
             'type': 'image/jpeg',  # mimetype
@@ -51,6 +50,5 @@ class WordPress:
 def main():
   w = WordPress('hello funny', 'Novia0829')
   w.auto_post_publish('test title', 'test content', '/Users/tittanlee/Documents/Project/wp_art_craw/45748/thumb.jpg')
-
   return
 
