@@ -57,7 +57,12 @@ class againooo:
       iframe['height'] = 360
       iframe['width']  = 620
 
-    
+    if 'via' in content_string:
+      via = art_content.find(string = 'via')
+      via.parent.decompose()
+
+    print(art_title)
+    # print(art_content)
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
     if os.path.exists(resize_thumb_jpg_path):
       hello_funny_wp = WordPress('hello funny', 'Novia0829')
@@ -72,7 +77,7 @@ class againooo:
       f.write(image.content)
       f.close()
 
-  def resize_image(self, img_path, height = 200, width = 200):
+  def resize_image(self, img_path, height = 320, width = 200):
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
     with open(img_path, 'r+b') as f:
       with Image.open(f) as image:
