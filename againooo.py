@@ -63,10 +63,22 @@ class againooo:
 
     print(art_title)
     # print(art_content)
+    
+    ads_content = self.insert_bloggerads(str(art_content))
+
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
     if os.path.exists(resize_thumb_jpg_path):
       hello_funny_wp = WordPress('hello funny', 'Novia0829')
-      hello_funny_wp.auto_post_publish(art_title, str(art_content), resize_thumb_jpg_path)
+      hello_funny_wp.auto_post_publish(art_title, ads_content, resize_thumb_jpg_path)
+
+  def insert_bloggerads(self, content):
+    ad_code = '\
+      <div style="float:none;margin:10px 0 10px 0;text-align:center;"> \
+        <ins style="display:inline-block"> \
+          <script src="http://js1.bloggerads.net/showbanner.aspx?blogid=20160315000013&amp;charset=utf-8" type="text/javascript"></script> \
+        </ins> \
+      </div>'
+    return ad_code + content
 
   def download_image(self, img_url, file_name):
     image = requests.get(img_url)
