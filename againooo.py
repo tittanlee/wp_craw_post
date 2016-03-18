@@ -19,13 +19,18 @@ class againooo:
     self.url      = url
     self.dir_name = url.split('/')[-2]
     r = requests.get(url)
-    if (r.status_code != 200):
-      return
-
     soup = BeautifulSoup(r.text, 'lxml')
     art_title = soup.title.text
-    art_content = soup.find('div', class_="Content_post")
+    print(art_title)
 
+    # find article header element
+    try:
+      art_category = soup.find('header', id = "Content_Header").small
+    except:
+      return
+    art_category_string = art_category.text 
+
+    art_content = soup.find('div', class_="Content_post")
     content_string = str(art_content)
 
     # Remove google ad.
@@ -117,9 +122,10 @@ def main():
 
   craw = againooo()
   url = 'http://againooo.com/%s/'
-  for i in range(46521, 46600):
+  for i in range(46100, 46200):
     tmp = (url %(i))
     print(tmp)
     craw.get_content(tmp)
+    print('\n')
 
 main()
