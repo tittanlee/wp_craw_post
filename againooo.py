@@ -8,6 +8,7 @@ from resizeimage import resizeimage
 
 from auto_post import *
 import shutil
+import re
 
 class againooo:
 
@@ -18,6 +19,9 @@ class againooo:
     self.url      = url
     self.dir_name = url.split('/')[-2]
     r = requests.get(url)
+    if (r.status_code != 200):
+      return
+
     soup = BeautifulSoup(r.text, 'lxml')
     art_title = soup.title.text
     art_content = soup.find('div', class_="Content_post")
@@ -33,10 +37,13 @@ class againooo:
     if 'img' in content_string:
       for img in art_content.find_all('img'):
         img['class'] = 'aligncenter'
-        img['src'] = self.img_server_url + img['adonis-src']
+
+        if (img.get('adonis-src')):
+          img['src'] = self.img_server_url + img['adonis-src']
+          del img['adonis-src']
+        
         img['height'] = 360
         img['width']  = 620
-        del img['adonis-src']
 
       # download thumb image.
       if os.path.exists(self.dir_name):
@@ -58,8 +65,11 @@ class againooo:
       iframe['width']  = 620
 
     if 'via' in content_string:
-      via = art_content.find(string = 'via')
-      via.parent.decompose()
+      try:
+        via = art_content.find(string = re.compile('^[Vv][Ii][Aa]'))
+        via.parent.decompose()
+      except:
+        pass
 
     print(art_title)
     # print(art_content)
@@ -99,10 +109,17 @@ class againooo:
 
 def main():
 
-  url = sys.argv[1]
+  # url = sys.argv[1]
+  # craw = againooo()
+  # craw.get_content(url)
+
+
+
   craw = againooo()
-  craw.get_content(url)
-
-
+  url = 'http://againooo.com/%s/'
+  for i in range(46521, 46600):
+    tmp = (url %(i))
+    print(tmp)
+    craw.get_content(tmp)
 
 main()
