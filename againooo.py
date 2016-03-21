@@ -5,6 +5,7 @@ import sys, os
 # image resize lib
 from PIL import Image
 from resizeimage import resizeimage
+from resizeimage import imageexceptions
 
 from auto_post import *
 import shutil
@@ -21,14 +22,14 @@ class againooo:
     r = requests.get(url)
     soup = BeautifulSoup(r.text, 'lxml')
     art_title = soup.title.text
-    print(art_title)
 
     # find article header element
     try:
       art_category = soup.find('header', id = "Content_Header").small
     except:
       return
-    art_category_string = art_category.text 
+    if (art_category):
+      art_category_string = art_category.text 
 
     art_content = soup.find('div', class_="Content_post")
     content_string = str(art_content)
@@ -47,8 +48,8 @@ class againooo:
           img['src'] = self.img_server_url + img['adonis-src']
           del img['adonis-src']
         
-        img['height'] = 360
-        img['width']  = 620
+        # img['height'] = 360
+        # img['width']  = 620
 
       # download thumb image.
       if os.path.exists(self.dir_name):
@@ -62,7 +63,6 @@ class againooo:
         return
 
       self.resize_image(thumb_jpg_path)
-      os.remove(thumb_jpg_path)
 
     if '<iframe' in content_string:
       iframe = art_content.find('iframe')
@@ -106,11 +106,15 @@ class againooo:
 
   def resize_image(self, img_path, height = 320, width = 200):
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
-    with open(img_path, 'r+b') as f:
-      with Image.open(f) as image:
-        cover = resizeimage.resize_cover(image, [height, width])
-        cover.save(resize_thumb_jpg_path, image.format)
-        f.close()
+    try:
+      with open(img_path, 'r+b') as f:
+        with Image.open(f) as image:
+          cover = resizeimage.resize_cover(image, [height, width])
+          cover.save(resize_thumb_jpg_path, image.format)
+          f.close()
+          os.remove(img_path)
+    except imageexceptions.ImageSizeError:
+      os.renames(img_path, resize_thumb_jpg_path)
 
 def main():
 
@@ -122,7 +126,7 @@ def main():
 
   craw = againooo()
   url = 'http://againooo.com/%s/'
-  for i in range(46100, 46200):
+  for i in range(46920, 47000):
     tmp = (url %(i))
     print(tmp)
     craw.get_content(tmp)
