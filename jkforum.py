@@ -33,7 +33,12 @@ class jkforum:
     self.url = url
     self.dir_name = "./jk/" + url.split('-')[1]
 
-    r = requests.get(url)
+    headers = {
+        'User-Agent': 'My User Agent 1.0',
+        'From': 'youremail@domain.com'  # This is another valid field
+    }
+
+    r = requests.get(url, headers = headers)
     r.encoding = 'big5'
     soup = BeautifulSoup(r.text, 'lxml')
 
@@ -54,8 +59,11 @@ class jkforum:
         pass
 
     art_content = ''.join(image_content)
-    print(art_title)
+    if(len(art_content) == 0):
+      return
 
+    print("%s - %s" %(url,art_title))
+    
     web_img_url = BeautifulSoup(art_content, 'lxml').img['src']
     status = self.download_image(web_img_url)
     if (status == 'FAILED'):
@@ -90,7 +98,7 @@ class jkforum:
       f.close()
     self.resize_image(file_name)
 
-  def resize_image(self, img_path, height = 320, width = 200):
+  def resize_image(self, img_path, height = 200, width = 200):
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
     try:
       fd_img = open(img_path, 'r+b')
@@ -106,8 +114,13 @@ def main():
   # http://www.teepr.com/448487/edwardliu/
   url = sys.argv[1]
   craw = jkforum()
-  for art_link in craw.get_art_link_by_page(url):
-    craw.get_content(art_link)
+
+  tmp_url = 'http://www.jkforum.net/forum-520-%s.html'
+
+  for idx in range(12, 1550):
+    url = (tmp_url %(idx))
+    for art_link in craw.get_art_link_by_page(url):
+      craw.get_content(art_link)
     
 
 
