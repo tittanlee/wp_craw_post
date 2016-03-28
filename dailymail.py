@@ -14,53 +14,41 @@ import re
 class teepr:
 
   def __init__(self):
-    self.base_url = 'http://www.teepr.com'
+    self.base_url = 'http://www.dailymail.co.uk'
 
-  
   def get_content(self, url):
     self.url = url
-    self.dir_name = url.split('/')[3]
+    self.dir_name = url.split('/')[-2]
 
     r = requests.get(url)
     r.encoding = 'utf-8'
     soup = BeautifulSoup(r.text, 'lxml')
-    art_title = soup.title.text
 
-    art_content = soup.find ("div", class_ = "post-single-content box mark-links")
+    post_content = soup.find ("div", class_ = "article-text")
+    art_title = post_content.h1.text
+
+    art_content = post_content.find("div", attrs = {"itemprop":"articleBody"})
     content_string = str(art_content)
 
-    for link in art_content.find_all(href = True):
-      link.decompose()
-
-    # Remove ad
-    for ad in art_content.find_all("div", class_ = re.compile('[aA][dD]')):
-      ad.decompose()
-
-    # Remove google ad.
-    if 'google' in content_string:
-      for ads_google in art_content.find_all('ins', class_ = re.compile('adsbygoogle')):
-        ads_google.decompose()
-
-    # Remove javascript
-    if 'javascript' in content_string:
-      for javascript in art_content.find_all('script'):
-        javascript.decompose()
+    # Remove div without class attr
+    for null_div in art_content.find_all("div"):
+      if not null_div.has_attr('class'):
+        null_div.extract()
+    
+    # Remove AD Video
+    try:
+      art_content.find("div",  class_ = "moduleFull mol-video").decompose()
+    except:
+      pass
 
     # Remove html comment
     for element in art_content(text=lambda text: isinstance(text, Comment)):
       element.extract()
 
-    # Remove the from source
-    for source in art_content.find_all(text = re.compile("來源")):
-      source.parent.decompose()
-
     # replace img class setting.
     if 'img' in content_string:
       for img in art_content.find_all('img'):
         img['class'] = 'aligncenter'
-        if (img.get('adonis-src')):
-          img['src'] = self.img_server_url + img['adonis-src']
-          del img['adonis-src']
         
       # download thumb image.
       if os.path.exists(self.dir_name):
@@ -78,10 +66,9 @@ class teepr:
   
 
     print(art_title)
-    # print(art_content)
 
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
-    hello_funny_wp = WordPress('hello funny', 'Novia0829')
+    hello_funny_wp = WordPress('tittanlee', 'Novia0829')
     hello_funny_wp.auto_post_publish(str(art_title), str(art_content), resize_thumb_jpg_path)
 
   def insert_bloggerads(self, content):

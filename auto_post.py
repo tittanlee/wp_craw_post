@@ -8,8 +8,8 @@ import uuid
 
 class WordPress:
 
-  def __init__(self, username, password):
-    self.wp = Client('http://hellofunny-zerozero7.rhcloud.com/xmlrpc.php', username, password)
+  def __init__(self, site, username, password):
+    self.wp = Client( site + '/xmlrpc.php', username, password)
 
   def auto_post_publish(self, title, content, thumbnail_path):
     self.post         = WordPressPost()
