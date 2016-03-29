@@ -11,21 +11,24 @@ from auto_post import *
 import shutil
 import re
 
-class teepr:
+class dailymail:
 
   def __init__(self):
     self.base_url = 'http://www.dailymail.co.uk'
 
   def get_content(self, url):
     self.url = url
-    self.dir_name = url.split('/')[-2]
+    self.dir_name = './dailymail/' + url.split('/')[-2]
 
     r = requests.get(url)
     r.encoding = 'utf-8'
     soup = BeautifulSoup(r.text, 'lxml')
 
     post_content = soup.find ("div", class_ = "article-text")
-    art_title = post_content.h1.text
+    try:
+      art_title = post_content.h1.text
+    except:
+      return
 
     art_content = post_content.find("div", attrs = {"itemprop":"articleBody"})
     content_string = str(art_content)
@@ -55,20 +58,22 @@ class teepr:
         shutil.rmtree(self.dir_name)
 
       thumb_jpg_path        = './' + self.dir_name + '/temp_thumb.jpg'
-      os.mkdir(self.dir_name)
+      os.makedirs(self.dir_name)
       status = self.download_image(art_content.img['src'], thumb_jpg_path)
       if (status == 'FAILED'):
         shutil.rmtree(self.dir_name)
         return
 
       self.resize_image(thumb_jpg_path)
+    else:
+      return
 
   
 
     print(art_title)
 
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
-    hello_funny_wp = WordPress('tittanlee', 'Novia0829')
+    hello_funny_wp = WordPress('https://newlife-zerozero7.rhcloud.com', 'tittanlee', 'Novia0829')
     hello_funny_wp.auto_post_publish(str(art_title), str(art_content), resize_thumb_jpg_path)
 
   def insert_bloggerads(self, content):
@@ -102,10 +107,18 @@ class teepr:
       os.renames(img_path, resize_thumb_jpg_path)
 
 def main():
-  # http://www.teepr.com/448487/edwardliu/
-  url = sys.argv[1]
-  craw = teepr()
-  craw.get_content(url)
+  # url = sys.argv[1]
+  # tmpp_url = 'http://www.dailymail.co.uk/wires/ap/article-3457909/'
+  tmp_url = 'http://www.dailymail.co.uk/wires/ap/article-%s/'
+  craw = dailymail()
+
+  for idx in range(3459011, 3459999):
+    url = (tmp_url %(idx))
+    print(url)
+    try:
+      craw.get_content(url)
+    except:
+      pass
 
 
 
