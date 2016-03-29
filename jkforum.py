@@ -71,8 +71,9 @@ class jkforum:
       return
 
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
-    hello_funny_wp = WordPress('http://gigashare.tw/wordpress', 'rootroot', '123456')
-    hello_funny_wp.auto_post_publish(str(art_title), str(art_content), resize_thumb_jpg_path)
+    hello_funny_wp = WordPress('https://hellofunny-zerozero7.rhcloud.com', 'hello funny', 'Novia0829')
+    cat = hello_funny_wp.locate_category_by_name("正妹")
+    hello_funny_wp.auto_post_publish(cat, str(art_title), str(art_content), resize_thumb_jpg_path)
 
   def insert_bloggerads(self, content):
     ad_code = '\
@@ -112,12 +113,12 @@ class jkforum:
 
 def main():
   # http://www.teepr.com/448487/edwardliu/
-  url = sys.argv[1]
+  # url = sys.argv[1]
   craw = jkforum()
 
   tmp_url = 'http://www.jkforum.net/forum-520-%s.html'
 
-  for idx in range(12, 1550):
+  for idx in range(2, 4):
     url = (tmp_url %(idx))
     for art_link in craw.get_art_link_by_page(url):
       craw.get_content(art_link)
