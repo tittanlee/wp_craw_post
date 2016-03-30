@@ -11,10 +11,15 @@ from auto_post import *
 import shutil
 import re
 
+import urllib.request
+
 class jkforum:
 
   def __init__(self):
     self.base_url = 'http://www.jkforum.net'
+    self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36',
+    }
 
   def get_art_link_by_page(self, url_page):
     # http://www.jkforum.net/forum-393-2.html
@@ -33,18 +38,21 @@ class jkforum:
     self.url = url
     self.dir_name = "./jk/" + url.split('-')[1]
 
-    headers = {
-        'User-Agent': 'My User Agent 1.0',
-        'From': 'youremail@domain.com'  # This is another valid field
-    }
 
-    r = requests.get(url, headers = headers)
+    r = requests.get(url, headers = self.headers)
     r.encoding = 'big5'
     soup = BeautifulSoup(r.text, 'lxml')
 
     art_title = soup.find("h1", class_ = "title-cont").get_text()
     art_title = ''.join(str(e) for e in art_title.split("\n")[1:3])
 
+
+    self.dir_name = "./jk/" + url.split('-')[1] + "-" + art_title.strip()
+    if os.path.exists(self.dir_name):
+      shutil.rmtree(self.dir_name)
+    os.makedirs(self.dir_name)
+
+    print("%s - %s" %(url,art_title))
     image_content = list()
     content_body = soup.find("tbody")
     for image in content_body.select("img"):
@@ -61,19 +69,19 @@ class jkforum:
     art_content = ''.join(image_content)
     if(len(art_content) == 0):
       return
-
-    print("%s - %s" %(url,art_title))
     
     web_img_url = BeautifulSoup(art_content, 'lxml').img['src']
-    status = self.download_image(web_img_url)
+    thumb_jpg_path = self.dir_name + '/thumb.jpg'
+    status = self.download_thumb_image(web_img_url, thumb_jpg_path)
     if (status == 'FAILED'):
       shutil.rmtree(self.dir_name)
       return
 
-    resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
+    print(thumb_jpg_path)
+    return
     hello_funny_wp = WordPress('https://hellofunny-zerozero7.rhcloud.com', 'hello funny', 'Novia0829')
     cat = hello_funny_wp.locate_category_by_name("正妹")
-    hello_funny_wp.auto_post_publish(cat, str(art_title), str(art_content), resize_thumb_jpg_path)
+    hello_funny_wp.auto_post_publish(cat, str(art_title), str(art_content), thumb_jpg_path)
 
   def insert_bloggerads(self, content):
     ad_code = '\
@@ -84,23 +92,15 @@ class jkforum:
       </div>'
     return ad_code + content
 
-  def download_image(self, img_url):
-    if os.path.exists(self.dir_name):
-      shutil.rmtree(self.dir_name)
+  def download_image(self, img_url, file_name):
+    urllib.request.urlretrieve(img_url, file_name)
 
-    os.makedirs(self.dir_name)
-    image = requests.get(img_url)
-    if image.status_code != 200:
-      return 'FAILED'
-
-    file_name = self.dir_name + "/" + img_url.split('/')[-1]
-    with open(file_name, 'wb') as f:
-      f.write(image.content)
-      f.close()
+  def download_thumb_image(self, img_url, file_name):
+    self.download_image(img_url, file_name)
     self.resize_image(file_name)
 
   def resize_image(self, img_path, height = 200, width = 200):
-    resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
+    resize_thumb_jpg_path = './' + self.dir_name + '/resize_thumb.jpg'
     try:
       fd_img = open(img_path, 'r+b')
       img = Image.open(fd_img) 
@@ -108,8 +108,9 @@ class jkforum:
       img.save(resize_thumb_jpg_path, img.format)
       fd_img.close()
       os.remove(img_path)
+      os.renames(resize_thumb_jpg_path, img_path)
     except imageexceptions.ImageSizeError:
-      os.renames(img_path, resize_thumb_jpg_path)
+      pass
 
 def main():
   # http://www.teepr.com/448487/edwardliu/
