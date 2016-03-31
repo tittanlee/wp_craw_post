@@ -49,60 +49,38 @@ class ck101:
   def get_content(self, url):
     self.url = url
 
-    r = requests.get(url, headers = self.headers)
+    r = requests.get(url, headers = self.headers, verify=True)
     r.encoding = 'utf-8'
     soup = BeautifulSoup(r.text, 'lxml')
 
     art_title = soup.h1.get_text(strip=True)
     art_title = re.sub('['+string.punctuation+']', '', art_title)
     art_title = re.sub("\s+", "", art_title)
+    art_title = art_title.rstrip(".")
 
-    self.dir_name = "./ck101/" + url.split('-')[1] + '-' + art_title.rstrip(".")
+    # self.dir_name = "./ck101/" + url.split('-')[1] + '-' + art_title
+    self.dir_name = "./ck101/" + art_title
     if os.path.exists(self.dir_name):
       shutil.rmtree(self.dir_name)
     os.makedirs(self.dir_name)
 
-    print("%s - %s" %(url,art_title))
+    print("%s - %s" %(url, art_title))
     article = soup.find(class_="article_plc_user")
+    art_content = str()
     for img in article.find_all("img"):
-      print(img['file'])
-      self.download_image(img['file'])
+      if img.has_attr('file'): 
+        img_url_path = img['file']
+        img_save_name = self.download_image(img_url_path)
 
-    return
+        for k in list(img.attrs.keys()):
+          del img[k]
+        img['src'] = ('/wordpress/article/%s/' %(art_title)) + img_save_name.split('/')[-1]
+        art_content += (str(img) + '\n') 
 
-    image_content = list()
-    content_body = soup.find("tbody")
-    for image in content_body.select("img"):
-      try:
-        # image['class'] = "aligncenter"
-        # image['src'] = image['zoomfile']
-        # del image['file']
-        # del image['zoomfile']
-        # del image['onclick']
-        # image_content.append(str(image) + "\n")
-        # self.download_image(image['src'])
-        if not 'http://www.mymypic.net' in image['zoomfile']:
-          image['zoomfile'] = 'http://www.mymypic.net' + image['file']
-
-        image_path = image['zoomfile']
-        self.download_image(image_path)
-      except:
-        pass
-
-    # art_content = ''.join(image_content)
-    # if(len(art_content) == 0):
-      # return
-
-    return
-    
-    web_img_url = BeautifulSoup(art_content, 'lxml').img['src']
-    status = self.download_image(web_img_url)
-    if (status == 'FAILED'):
-      shutil.rmtree(self.dir_name)
-      return
-
+    first_jpg_path = self.dir_name + '/' + [f for f in os.listdir(self.dir_name)][0]
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
-    hello_funny_wp = WordPress('https://hellofunny-zerozero7.rhcloud.com', 'hello funny', 'Novia0829')
+    self.resize_image(first_jpg_path)
+    hello_funny_wp = WordPress('http://gigashare.tw/wordpress', 'rootroot', '123456')
     cat = hello_funny_wp.locate_category_by_name("正妹")
     hello_funny_wp.auto_post_publish(cat, str(art_title), str(art_content), resize_thumb_jpg_path)
 
@@ -121,14 +99,14 @@ class ck101:
     f = open(file_name, 'wb')
     f.write(r.content)
     f.close()
+    return file_name
 
 
     
     # result = urllib.request.urlretrieve(img_url, file_name)
 
   def download_thumb_image(self, img_url):
-    file_name = self.dir_name + "/" + img_url.split('/')[-1]
-    result = urllib.request.urlretrieve(img_url, file_name)
+    file_name = download_image(img_url)
     self.resize_image(file_name)
 
   def resize_image(self, img_path, height = 200, width = 200):
@@ -139,32 +117,33 @@ class ck101:
       img = resizeimage.resize_thumbnail(img, [height, width])
       img.save(resize_thumb_jpg_path, img.format)
       fd_img.close()
-      os.remove(img_path)
+      # os.remove(img_path)
     except imageexceptions.ImageSizeError:
-      os.renames(img_path, resize_thumb_jpg_path)
+      shutil.copyfile(img_path, resize_thumb_jpg_path)
+      # os.renames(img_path, resize_thumb_jpg_path)
 
 def main():
   craw = ck101()
-  url = 'http://ck101.com/thread-3411109-1-4.html'
-  craw.get_content(url)
+  # url = 'http://ck101.com/thread-3460443-1-1.html'
+  # craw.get_content(url)
 
 
-  # tmp_page_url = 'http://ck101.com/forum-1226-%s.html'
-  # for idx in range(1, 10):
-  #   page_url = (tmp_page_url %idx)
-  #   for art_url in craw.get_art_link_by_page(page_url):
-  #     try_count = 0
-  #     while True:
-  #       try:
-  #         craw.get_content(art_url)
-  #         break
-  #       except:
-  #         print("failed - %s" %art_url)
-  #         time.sleep(1)
-  #         try_count += 1
-  #         if (try_count == 10):
-  #           break
-  #         pass
+  tmp_page_url = 'http://ck101.com/forum-1226-%s.html'
+  for idx in range(1, 2):
+    page_url = (tmp_page_url %idx)
+    for art_url in craw.get_art_link_by_page(page_url):
+      try_count = 0
+      while True:
+        try:
+          craw.get_content(art_url)
+          break
+        except:
+          if (try_count == 5):
+            break
+          try_count += 1
+          print("failed get - %s, retry count:%s" %(art_url, try_count))
+          time.sleep(1)
+          pass
           
 
     
