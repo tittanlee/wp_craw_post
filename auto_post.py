@@ -16,8 +16,8 @@ class WordPress:
 
   def auto_post_publish(self, category, title, content, thumbnail_path):
     self.post               = WordPressPost()
-    self.post.terms_names   = { 'post_tag':['beautiful', 'girl'], 
-                                'category':[category.name],
+    self.post.terms_names   = { 'post_tag':[], 
+                                'category':[category],
                               }
     self.post.title         = title
     self.post.content       = content

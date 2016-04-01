@@ -1,5 +1,5 @@
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 import sys, os
 
 # image resize lib
@@ -11,10 +11,18 @@ from auto_post import *
 import shutil
 import re
 
+import urllib.request
+import time
+import string
+
 class againooo:
 
   def __init__(self):
     self.img_server_url = 'http://file.againooo.com/'
+    self.headers = {
+            'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
+    }
+
   
   def get_content(self, url):
     self.url      = url
@@ -55,14 +63,8 @@ class againooo:
       if os.path.exists(self.dir_name):
         shutil.rmtree(self.dir_name)
 
-      thumb_jpg_path        = './' + self.dir_name + '/temp_thumb.jpg'
-      os.mkdir(self.dir_name)
-      status = self.download_image(art_content.img['src'], thumb_jpg_path)
-      if (status == 'FAILED'):
-        shutil.rmtree(self.dir_name)
-        return
+      os.makedirs(self.dir_name)
 
-      self.resize_image(thumb_jpg_path)
 
     if '<iframe' in content_string:
       iframe = art_content.find('iframe')
@@ -76,15 +78,12 @@ class againooo:
       except:
         pass
 
-    print(art_title)
-    # print(art_content)
+    print(art_title, art_category_string)
     
-    ads_content = self.insert_bloggerads(str(art_content))
-
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
-    if os.path.exists(resize_thumb_jpg_path):
-      hello_funny_wp = WordPress('hello funny', 'Novia0829')
-      hello_funny_wp.auto_post_publish(art_title, ads_content, resize_thumb_jpg_path)
+    status = self.download_thumb_image(art_content.img['src'])
+    wp = WordPress('http://funnyplus-zerozero7.rhcloud.com', 'root', 'Novia0829')
+    wp.auto_post_publish(art_category_string, str(art_title), str(art_content), resize_thumb_jpg_path)
 
   def insert_bloggerads(self, content):
     ad_code = '\
@@ -95,26 +94,34 @@ class againooo:
       </div>'
     return ad_code + content
 
-  def download_image(self, img_url, file_name):
-    image = requests.get(img_url)
-    if image.status_code != 200:
-      return 'FAILED'
+  def download_image(self, img_url):
+    file_name = self.dir_name + "/" + img_url.split('/')[-1]
+    r = requests.get(img_url, headers = self.headers)
+    f = open(file_name, 'wb')
+    f.write(r.content)
+    f.close()
+    return file_name
 
-    with open(file_name, 'wb') as f:
-      f.write(image.content)
-      f.close()
 
-  def resize_image(self, img_path, height = 320, width = 200):
+    
+    # result = urllib.request.urlretrieve(img_url, file_name)
+
+  def download_thumb_image(self, img_url):
+    file_name = self.download_image(img_url)
+    self.resize_image(file_name)
+
+  def resize_image(self, img_path, height = 200, width = 200):
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
     try:
-      with open(img_path, 'r+b') as f:
-        with Image.open(f) as image:
-          cover = resizeimage.resize_cover(image, [height, width])
-          cover.save(resize_thumb_jpg_path, image.format)
-          f.close()
-          os.remove(img_path)
+      fd_img = open(img_path, 'r+b')
+      img = Image.open(fd_img) 
+      img = resizeimage.resize_thumbnail(img, [height, width])
+      img.save(resize_thumb_jpg_path, img.format)
+      fd_img.close()
+      # os.remove(img_path)
     except imageexceptions.ImageSizeError:
-      os.renames(img_path, resize_thumb_jpg_path)
+      shutil.copyfile(img_path, resize_thumb_jpg_path)
+      # os.renames(img_path, resize_thumb_jpg_path)
 
 def main():
 
@@ -126,10 +133,9 @@ def main():
 
   craw = againooo()
   url = 'http://againooo.com/%s/'
-  for i in range(46920, 47000):
+  for i in range(46920, 46930):
     tmp = (url %(i))
     print(tmp)
     craw.get_content(tmp)
-    print('\n')
 
 main()
