@@ -23,15 +23,37 @@ class againooo:
             'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
     }
 
-  
-  def get_content(self, url):
-    self.url      = url
-    self.dir_name = url.split('/')[-2]
-    r = requests.get(url)
-    soup = BeautifulSoup(r.text, 'lxml')
-    art_title = soup.title.text
+    self.wp = WordPress('http://localhost/wp', 'tittan', 'Novia0829')
 
-    # find article header element
+  def get_art_link_by_page(self, url_page):
+    r = requests.get(url_page, headers = self.headers)
+    soup = BeautifulSoup(r.text, "lxml")
+    article_list = soup.find("div", id = "Article-list")
+    for each_article in article_list.select(".thumb"):
+      thumb_link = each_article.img['src']
+      art_link   = each_article['href']
+      yield art_link, thumb_link
+      # print(art_link, " = ",  thumb_path)
+  
+  def get_content(self, url, thumb_link):
+    wp_new_post = self.wp.request_new_post()
+    article_id  = wp_new_post.id
+
+    self.url            = url
+    self.dir_name       = "./againooo/" + article_id
+    art_title_string    = str()
+    art_category_string = str()
+    art_content_string  = str()
+
+    if os.path.exists(self.dir_name):
+      shutil.rmtree(self.dir_name)
+    os.makedirs(self.dir_name)
+
+    r = requests.get(url, headers = self.headers)
+    soup = BeautifulSoup(r.text, 'lxml')
+    art_title_string = soup.title.text
+
+    # find category
     try:
       art_category = soup.find('header', id = "Content_Header").small
     except:
@@ -39,60 +61,92 @@ class againooo:
     if (art_category):
       art_category_string = art_category.text 
 
+
+    # To find article content
     art_content = soup.find('div', class_="Content_post")
-    content_string = str(art_content)
+    art_content_string = str(art_content)
+
+    # Remove html comment
+    for element in art_content(text=lambda text: isinstance(text, Comment)):
+      element.extract()
 
     # Remove google ad.
-    if 'google' in content_string:
+    if 'google' in art_content_string:
       for ads_google in art_content.find_all('div', class_ = 'centerBlock'):
-        ads_google.decompose()
+          ads_google.decompose()
+    
+    # Remove another Ads
+    if 'ads' in art_content_string:
+      for ads in art_content.find_all(id = re.compile("[aA][dD][sS]")):
+        ads.decompose()
+
+    # remove <p>
+    self._empty_tag_attrs(art_content, 'p')
+
+    # remove span
+    self._empty_tag_attrs(art_content, 'span')
+
+    # remove div
+    self._empty_tag_attrs(art_content, 'div')
+    
+    # remove br
+    self._empty_tag_attrs(art_content, 'br')
+
+    # remove strong
+    self._empty_tag_attrs(art_content, 'strong')
+
+    # remove section
+    self._empty_tag_attrs(art_content, 'section')
 
     # replace img class setting.
-    if 'img' in content_string:
-      for img in art_content.find_all('img'):
-        img['class'] = 'aligncenter'
+    PREFIX_WP_CONTENT_IMG_PATH = '/wp/wp-content/img/' + article_id + '/'
+    if 'img' in art_content_string:
+      for img in art_content.select('img'):
+        if (img.has_attr('adonis-src')):
+          img_link = self.img_server_url + img['adonis-src']
+        elif (img.has_attr('src')):
+          img_link =  img['src']
 
-        if (img.get('adonis-src')):
-          img['src'] = self.img_server_url + img['adonis-src']
-          del img['adonis-src']
-        
-        # img['height'] = 360
-        # img['width']  = 620
-
-      # download thumb image.
-      if os.path.exists(self.dir_name):
-        shutil.rmtree(self.dir_name)
-
-      os.makedirs(self.dir_name)
+        self.download_image(img_link)
+        new_img_tag = soup.new_tag("img")    
+        new_img_tag['class'] = 'aligncenter'
+        new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + img_link.split("/")[-1]
+        img.insert_before(new_img_tag)
+        img.decompose()
 
 
-    if '<iframe' in content_string:
-      iframe = art_content.find('iframe')
-      iframe['height'] = 360
-      iframe['width']  = 620
+    if '<iframe' in art_content_string:
+      iframe = art_content.find_all('iframe')
+      for media_fram in iframe:
+        media_fram['height'] = 360
+        media_fram['width']  = 620
 
-    if 'via' in content_string:
+    if 'via' in art_content_string:
       try:
         via = art_content.find(string = re.compile('^[Vv][Ii][Aa]'))
         via.parent.decompose()
       except:
         pass
 
-    print(art_title, art_category_string)
+    art_content = str(art_content)
+    print(url, thumb_link, art_category_string, art_title_string)
+    # print(art_content)
     
-    resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
-    status = self.download_thumb_image(art_content.img['src'])
-    wp = WordPress('http://funnyplus-zerozero7.rhcloud.com', 'root', 'Novia0829')
-    wp.auto_post_publish(art_category_string, str(art_title), str(art_content), resize_thumb_jpg_path)
+    try:
+      resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
+      status = self.download_thumb_image(thumb_link)
+      self.wp.auto_post_publish(wp_new_post, art_category_string, art_title_string, art_content, resize_thumb_jpg_path)
+    except:
+      return
 
-  def insert_bloggerads(self, content):
-    ad_code = '\
-      <div style="float:none;margin:10px 0 10px 0;text-align:center;"> \
-        <ins style="display:inline-block"> \
-          <script src="http://js1.bloggerads.net/showbanner.aspx?blogid=20160315000013&amp;charset=utf-8" type="text/javascript"></script> \
-        </ins> \
-      </div>'
-    return ad_code + content
+
+  def _empty_tag_attrs(self, art_content, tag_name):
+    try:
+      for lbl in art_content.select(tag_name):
+        for k in list(lbl.attrs.keys()):
+          del lbl[k]
+    except:
+      pass
 
   def download_image(self, img_url):
     file_name = self.dir_name + "/" + img_url.split('/')[-1]
@@ -101,16 +155,12 @@ class againooo:
     f.write(r.content)
     f.close()
     return file_name
-
-
     
-    # result = urllib.request.urlretrieve(img_url, file_name)
-
   def download_thumb_image(self, img_url):
     file_name = self.download_image(img_url)
     self.resize_image(file_name)
 
-  def resize_image(self, img_path, height = 200, width = 200):
+  def resize_image(self, img_path, width = 220, height = 220):
     resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
     try:
       fd_img = open(img_path, 'r+b')
@@ -118,24 +168,29 @@ class againooo:
       img = resizeimage.resize_thumbnail(img, [height, width])
       img.save(resize_thumb_jpg_path, img.format)
       fd_img.close()
-      # os.remove(img_path)
+      os.remove(img_path)
     except imageexceptions.ImageSizeError:
-      shutil.copyfile(img_path, resize_thumb_jpg_path)
-      # os.renames(img_path, resize_thumb_jpg_path)
+      # shutil.copyfile(img_path, resize_thumb_jpg_path)
+      os.renames(img_path, resize_thumb_jpg_path)
 
 def main():
-
-  # url = sys.argv[1]
-  # craw = againooo()
-  # craw.get_content(url)
-
-
-
+  cat_list = ['政治', '理財', '時事', '兩性', '影劇', '科技', '親子', '運動', '健康', '新奇', '生活', '社會', '正妹', '寵物']
+  tmp_url = "http://againooo.com/category/%s/%s"
   craw = againooo()
-  url = 'http://againooo.com/%s/'
-  for i in range(46920, 46930):
-    tmp = (url %(i))
-    print(tmp)
-    craw.get_content(tmp)
+
+  for cat in cat_list:
+    for page_number in range(5, 7):
+      page_url = (tmp_url %(cat, page_number))
+      for art_link, thumb_link in craw.get_art_link_by_page(page_url):
+        craw.get_content(art_link, thumb_link)
+        print('==================================================')
+
+
+
+
+  # craw = againooo()
+  # url = 'http://againooo.com/48106/'
+  # thumb = 'http://file.againooo.com//n48106/t_m.jpg'
+  # craw.get_content(url, thumb)
 
 main()

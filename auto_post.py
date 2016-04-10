@@ -14,20 +14,29 @@ class WordPress:
     self.wp = Client( site + '/xmlrpc.php', username, password)
     self.categories = self.wp.call(taxonomies.GetTerms('category'))
 
-  def auto_post_publish(self, category, title, content, thumbnail_path):
-    self.post               = WordPressPost()
+  def request_new_post(self):
+    self.post = self.wp.call(GetPosts({'post_status': 'draft'}))
+    if len(self.post):
+      return self.post[-1]
+
+    self.post    = WordPressPost()
+    self.post.id = self.wp.call(NewPost(self.post))
+    return self.post
+
+  def auto_post_publish(self, new_post, category, title, content, thumbnail_path):
+    self.post               = new_post 
     self.post.terms_names   = { 'post_tag':[], 
                                 'category':[category],
                               }
     self.post.title         = title
     self.post.content       = content
 
-    attachment_id         = self._upload_thumbnail(thumbnail_path)
-    self.post.thumbnail   = attachment_id
+    # attachment_id         = self._upload_thumbnail(thumbnail_path)
+    # self.post.thumbnail   = attachment_id
     self.post.post_status = 'publish'
    
-    self.post.id      = self.wp.call(NewPost(self.post))
-    # self.wp.call(EditPost(self.post.id, self.post))
+    # self.post.id      = self.wp.call(NewPost(self.post))
+    self.wp.call(EditPost(self.post.id, self.post))
 
   def _upload_thumbnail(self, img_filepath):
     # prepare metadata
