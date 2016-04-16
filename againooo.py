@@ -23,7 +23,8 @@ class againooo:
             'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
     }
 
-    self.wp = WordPress('http://localhost/wp', 'tittan', 'Novia0829')
+    # self.wp = WordPress('http://www.dobee01.com', 'tittanlee', 'Novia0829')
+    self.wp = WordPress('http://www.dobee01.com', 'moneycome', 'Novia0829')
 
   def get_art_link_by_page(self, url_page):
     r = requests.get(url_page, headers = self.headers)
@@ -99,7 +100,7 @@ class againooo:
     self._empty_tag_attrs(art_content, 'section')
 
     # replace img class setting.
-    PREFIX_WP_CONTENT_IMG_PATH = '/wp/wp-content/img/' + article_id + '/'
+    PREFIX_WP_CONTENT_IMG_PATH = '/wp-content/img/' + article_id + '/'
     if 'img' in art_content_string:
       for img in art_content.select('img'):
         if (img.has_attr('adonis-src')):
@@ -121,15 +122,15 @@ class againooo:
         media_fram['height'] = 360
         media_fram['width']  = 620
 
-    if 'via' in art_content_string:
-      try:
-        via = art_content.find(string = re.compile('^[Vv][Ii][Aa]'))
-        via.parent.decompose()
-      except:
-        pass
+    # if 'via' in art_content_string:
+    #   try:
+    #     via = art_content.find(string = re.compile('^[Vv][Ii][Aa]'))
+    #     via.parent.decompose()
+    #   except:
+    #     pass
 
     art_content = str(art_content)
-    print(url, thumb_link, art_category_string, art_title_string)
+    print(article_id, url, thumb_link, art_category_string, art_title_string)
     # print(art_content)
     
     try:
@@ -174,23 +175,30 @@ class againooo:
       os.renames(img_path, resize_thumb_jpg_path)
 
 def main():
-  cat_list = ['政治', '理財', '時事', '兩性', '影劇', '科技', '親子', '運動', '健康', '新奇', '生活', '社會', '正妹', '寵物']
-  tmp_url = "http://againooo.com/category/%s/%s"
-  craw = againooo()
-
-  for cat in cat_list:
-    for page_number in range(5, 7):
-      page_url = (tmp_url %(cat, page_number))
-      for art_link, thumb_link in craw.get_art_link_by_page(page_url):
-        craw.get_content(art_link, thumb_link)
-        print('==================================================')
-
-
-
-
+  # cat_list = ['政治', '理財', '時事', '兩性', '影劇', '科技', '親子', '運動', '健康', '新奇', '生活', '社會', '正妹', '寵物']
+  # tmp_url = "http://againooo.com/category/%s/%s"
+  # tmp_url = 'http://againooo.com/category/New/%s'
   # craw = againooo()
-  # url = 'http://againooo.com/48106/'
-  # thumb = 'http://file.againooo.com//n48106/t_m.jpg'
-  # craw.get_content(url, thumb)
 
+  # art_count = 1
+  # for page_number in range(4, 5):
+  #   page_url = (tmp_url %(page_number))
+  #   for art_link, thumb_link in craw.get_art_link_by_page(page_url):
+  #     craw.get_content(art_link, thumb_link)
+  #     print('%04d ==================================================\n' %(art_count))
+  #     art_count = art_count + 1
+        
+
+  # http://againooo.com/49937/ 
+  # http://file.againooo.com//n49937/t_m.jpg
+  craw = againooo()
+  tmp_url   = 'http://againooo.com/%s/'
+  tmp_thumb = 'http://file.againooo.com/n%s/t_m.jpg'
+  art_count = 1
+  for idx in range(50499, 50504):
+    art_link   = (tmp_url %(idx))
+    thumb_link = (tmp_thumb %(idx))
+    craw.get_content(art_link, thumb_link)
+    print('No.%04d ==================================================\n' %(art_count))
+    art_count = art_count + 1
 main()
