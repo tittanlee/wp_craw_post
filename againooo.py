@@ -14,6 +14,8 @@ import re
 import urllib.request
 import time
 import string
+import random
+import http.client
 
 class againooo:
 
@@ -23,8 +25,8 @@ class againooo:
             'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
     }
 
-    # self.wp = WordPress('http://www.dobee01.com', 'tittanlee', 'Novia0829')
-    self.wp = WordPress('http://www.dobee01.com', 'moneycome', 'Novia0829')
+    self.wp = WordPress('http://www.dobee01.com', 'tittanlee', 'Novia0829')
+    # self.wp = WordPress('http://www.dobee01.com', 'moneycome', 'Novia0829')
 
   def get_art_link_by_page(self, url_page):
     r = requests.get(url_page, headers = self.headers)
@@ -37,7 +39,15 @@ class againooo:
       # print(art_link, " = ",  thumb_path)
   
   def get_content(self, url, thumb_link):
-    wp_new_post = self.wp.request_new_post()
+    status = 'BadStatusLine'
+    while(status == 'BadStatusLine'):
+      try:
+        wp_new_post = self.wp.request_new_post()
+        status = 'PASS'
+      except http.client.BadStatusLine as e:
+        print( 'get_content : ', e)
+        time.sleep(random.choice(range(30, 80)))
+
     article_id  = wp_new_post.id
 
     self.url            = url
@@ -79,7 +89,7 @@ class againooo:
     # Remove another Ads
     if 'ads' in art_content_string:
       for ads in art_content.find_all(id = re.compile("[aA][dD][sS]")):
-        ads.decompose()
+        ads.unwrap()
 
     # remove <p>
     self._empty_tag_attrs(art_content, 'p')
@@ -100,7 +110,7 @@ class againooo:
     self._empty_tag_attrs(art_content, 'section')
 
     # replace img class setting.
-    PREFIX_WP_CONTENT_IMG_PATH = '/wp-content/img/' + article_id + '/'
+    PREFIX_WP_CONTENT_IMG_PATH = 'http://www.dobee01.com/wp-content/img/' + article_id + '/'
     if 'img' in art_content_string:
       for img in art_content.select('img'):
         if (img.has_attr('adonis-src')):
@@ -108,19 +118,23 @@ class againooo:
         elif (img.has_attr('src')):
           img_link =  img['src']
 
-        self.download_image(img_link)
-        new_img_tag = soup.new_tag("img")    
-        new_img_tag['class'] = 'aligncenter'
-        new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + img_link.split("/")[-1]
-        img.insert_before(new_img_tag)
-        img.decompose()
+        try:
+          self.download_image(img_link)
+          new_img_tag = soup.new_tag("img")    
+          new_img_tag['class'] = 'aligncenter'
+          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + img_link.split("/")[-1]
+          img.insert_before(new_img_tag)
+          img.decompose()
+        except:
+          pass
 
 
     if '<iframe' in art_content_string:
       iframe = art_content.find_all('iframe')
       for media_fram in iframe:
-        media_fram['height'] = 360
-        media_fram['width']  = 620
+        media_fram['height'] = "360"
+        media_fram['width']  = "80%"
+        media_fram['class']  = "wp-video"
 
     # if 'via' in art_content_string:
     #   try:
@@ -176,17 +190,17 @@ class againooo:
 
 def main():
   # cat_list = ['政治', '理財', '時事', '兩性', '影劇', '科技', '親子', '運動', '健康', '新奇', '生活', '社會', '正妹', '寵物']
-  # tmp_url = "http://againooo.com/category/%s/%s"
-  # tmp_url = 'http://againooo.com/category/New/%s'
+  # tmp_url = "http://againooo.com/category/正妹/%s"
   # craw = againooo()
 
   # art_count = 1
-  # for page_number in range(4, 5):
+  # for page_number in range(1, 3):
   #   page_url = (tmp_url %(page_number))
   #   for art_link, thumb_link in craw.get_art_link_by_page(page_url):
   #     craw.get_content(art_link, thumb_link)
   #     print('%04d ==================================================\n' %(art_count))
   #     art_count = art_count + 1
+  #     time.sleep(25)
         
 
   # http://againooo.com/49937/ 
@@ -195,10 +209,11 @@ def main():
   tmp_url   = 'http://againooo.com/%s/'
   tmp_thumb = 'http://file.againooo.com/n%s/t_m.jpg'
   art_count = 1
-  for idx in range(50499, 50504):
+  for idx in range(56150, 56247):
     art_link   = (tmp_url %(idx))
     thumb_link = (tmp_thumb %(idx))
     craw.get_content(art_link, thumb_link)
     print('No.%04d ==================================================\n' %(art_count))
     art_count = art_count + 1
+    time.sleep(25)
 main()
