@@ -39,26 +39,10 @@ class againooo:
       # print(art_link, " = ",  thumb_path)
   
   def get_content(self, url, thumb_link):
-    status = 'BadStatusLine'
-    while(status == 'BadStatusLine'):
-      try:
-        wp_new_post = self.wp.request_new_post()
-        status = 'PASS'
-      except http.client.BadStatusLine as e:
-        print( 'get_content : ', e)
-        time.sleep(random.choice(range(30, 80)))
-
-    article_id  = wp_new_post.id
-
     self.url            = url
-    self.dir_name       = "./againooo/" + article_id
     art_title_string    = str()
     art_category_string = str()
     art_content_string  = str()
-
-    if os.path.exists(self.dir_name):
-      shutil.rmtree(self.dir_name)
-    os.makedirs(self.dir_name)
 
     r = requests.get(url, headers = self.headers)
     soup = BeautifulSoup(r.text, 'lxml')
@@ -71,6 +55,25 @@ class againooo:
       return
     if (art_category):
       art_category_string = art_category.text 
+    except_category_list = ['政治', '理財', '科技', '運動']
+    if art_category_string in except_category_list:
+      return 'CATEGROY_NOT_IN_LIST'
+
+    status = 'BadStatusLine'
+    while(status == 'BadStatusLine'):
+      try:
+        wp_new_post = self.wp.request_new_post()
+        status = 'PASS'
+      except http.client.BadStatusLine as e:
+        print( 'get_content : ', e)
+        time.sleep(random.choice(range(30, 80)))
+
+    article_id  = wp_new_post.id
+    self.dir_name       = "./againooo/" + article_id
+
+    if os.path.exists(self.dir_name):
+      shutil.rmtree(self.dir_name)
+    os.makedirs(self.dir_name)
 
 
     # To find article content
@@ -209,10 +212,13 @@ def main():
   tmp_url   = 'http://againooo.com/%s/'
   tmp_thumb = 'http://file.againooo.com/n%s/t_m.jpg'
   art_count = 1
-  for idx in range(56150, 56247):
+  # for idx in range(56408, 56500):
+  for idx in range(54304, 54305):
     art_link   = (tmp_url %(idx))
     thumb_link = (tmp_thumb %(idx))
-    craw.get_content(art_link, thumb_link)
+    status = craw.get_content(art_link, thumb_link)
+    if (status == 'CATEGROY_NOT_IN_LIST'):
+      continue
     print('No.%04d ==================================================\n' %(art_count))
     art_count = art_count + 1
     time.sleep(25)

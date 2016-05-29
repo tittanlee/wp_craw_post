@@ -15,7 +15,7 @@ class WordPress:
     self.categories = self.wp.call(taxonomies.GetTerms('category'))
 
   def request_new_post(self):
-    self.post = self.wp.call(GetPosts({'post_status': 'auto-draft'}))
+    self.post = self.wp.call(GetPosts({'post_status': 'draft'}))
     if len(self.post):
       return self.post[-1]
 
