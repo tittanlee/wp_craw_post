@@ -11,123 +11,228 @@ from auto_post import *
 import shutil
 import re
 
+import urllib.request
+import time
+import string
+import random
+import http.client
+
 class teepr:
 
   def __init__(self):
-    self.base_url = 'http://www.teepr.com'
+    self.img_server_url = 'http://www.teepr.com/'
+    self.headers = {
+            'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
+    }
 
-  
-  def get_content(self, url):
+    self.post_id = 0
+    self.cwd = os.getcwd()
+    self.wp = WordPress('http://www.dobee01.com', 'tittanlee', 'Novia0829')
+
+  def get_art_link_by_page(self, url_page):
+    r = requests.get(url_page, headers = self.headers)
+    soup = BeautifulSoup(r.text, "html.parser")
+    article_list = soup.find("div", id = "Article-list")
+    for each_article in article_list.select(".thumb"):
+      thumb_link = each_article.img['src']
+      art_link   = each_article['href']
+      yield art_link, thumb_link
+      # print(art_link, " = ",  thumb_path)
+
+  def get_soup(self, url):
     self.url = url
-    self.dir_name = url.split('/')[3]
-
-    r = requests.get(url)
+    r = requests.get(url, headers = self.headers)
     r.encoding = 'utf-8'
-    soup = BeautifulSoup(r.text, 'lxml')
-    art_title = soup.title.text
+    soup = BeautifulSoup(r.text, 'html.parser')
+    return soup
 
-    art_content = soup.find ("div", class_ = "post-single-content box mark-links")
-    content_string = str(art_content)
+  def get_title(self, soup):
+    try:
+      self.title = soup.find('meta', property="og:title")['content']
+      return self.title
+    except:
+      raise NameError(self.url, "parsing title has something wrong")
 
-    for link in art_content.find_all(href = True):
-      link.decompose()
+  def get_category(self, soup):
+    print(self.url, self.title)
+    category_list = ['健康', '兩性', '勵志', '娛樂', '寵物', '影劇', '感動', '新奇', '新聞', '時事', '正妹', '爆笑', '生活', '社會', '親子']
+    category_count = len(category_list)
+    idx = 0
+    for category in category_list:
+      print('%02s = %s' %(idx, category))
+      idx += 1
+    while(True):
+      cate_num = input('input the category number (input \'q\' to quit): ')
+      if (cate_num == 'q'):
+        raise NameError('quit select category')
+      cate_num = int(cate_num)
+      if (cate_num < 0) or (cate_num > category_count):
+        print('please input a correct category number')
+      else:
+        break
+    return category_list[cate_num]
 
-    # Remove ad
-    for ad in art_content.find_all("div", class_ = re.compile('[aA][dD]')):
-      ad.decompose()
+  def get_thumbnail_link(self, soup):
+    thumb_link = soup.find('meta', property="og:image")['content']
+    return thumb_link
+  
+  def get_wordpress_new_post_id(self):
+    self.wp_new_post = self.wp.request_new_post()
+    self.post_id  = self.wp_new_post.id
+    return self.post_id
+  
+  def get_content(self, soup, article_id):
+    art_content_string  = str()
+    self.dir_name       = self.cwd + "/teepr/" + article_id
 
-    # Remove google ad.
-    if 'google' in content_string:
-      for ads_google in art_content.find_all('ins', class_ = re.compile('adsbygoogle')):
-        ads_google.decompose()
+    if os.path.exists(self.dir_name):
+      shutil.rmtree(self.dir_name)
+    os.makedirs(self.dir_name)
 
-    # Remove javascript
-    if 'javascript' in content_string:
-      for javascript in art_content.find_all('script'):
-        javascript.decompose()
+    # To find article content
+
+    art_content = soup.find('div', class_="post-single-content box mark-links")
+    art_content_string = str(art_content)
 
     # Remove html comment
     for element in art_content(text=lambda text: isinstance(text, Comment)):
       element.extract()
 
-    # Remove the from source
-    for source in art_content.find_all(text = re.compile("來源")):
-      source.parent.decompose()
+    # Remove google ad.
+    for ads_google in art_content.find_all(class_ = re.compile('adsbygoogle')):
+      ads_google.decompose()
+    
+    # remove all text/javascript
+    for javascript in art_content.find_all('script', type="text/javascript"):
+      javascript.decompose()
+
+    # remove div class="ad-inserter"
+    for ads in art_content.find_all('div', class_ = "ad-inserter"):
+      ads.decompose()
+
+    # remove all "div-mobile-inread"
+    for mobile_inread in art_content.find_all('div', id="div-mobile-inread"):
+      mobile_inread.decompose()
+
+    # remove <p>
+    self._empty_tag_attrs(art_content, 'p')
+
+    # remove span
+    self._empty_tag_attrs(art_content, 'span')
+
+    # remove div
+    self._empty_tag_attrs(art_content, 'div')
+    
+    # remove br
+    self._empty_tag_attrs(art_content, 'br')
+
+    # remove strong
+    self._empty_tag_attrs(art_content, 'strong')
+
+    # remove section
+    self._empty_tag_attrs(art_content, 'section')
 
     # replace img class setting.
-    if 'img' in content_string:
-      for img in art_content.find_all('img'):
-        img['class'] = 'aligncenter'
-        if (img.get('adonis-src')):
-          img['src'] = self.img_server_url + img['adonis-src']
-          del img['adonis-src']
-        
-      # download thumb image.
-      if os.path.exists(self.dir_name):
-        shutil.rmtree(self.dir_name)
+    PREFIX_WP_CONTENT_IMG_PATH = 'http://www.dobee01.com/wp-content/img/' + article_id + '/'
+    img_idx = 1
+    if 'img' in art_content_string:
+      for img in art_content.select('img'):
+        if (img.has_attr('data-original')):
+          img_link = img['data-original']
+        elif (img.has_attr('src')):
+          img_link =  img['src']
 
-      thumb_jpg_path        = './' + self.dir_name + '/temp_thumb.jpg'
-      os.mkdir(self.dir_name)
-      status = self.download_image(art_content.img['src'], thumb_jpg_path)
-      if (status == 'FAILED'):
-        shutil.rmtree(self.dir_name)
-        return
+        try:
+          self.download_image(img_link, str(img_idx))
+          new_img_tag = soup.new_tag("img")    
+          new_img_tag['class'] = 'aligncenter'
+          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.' + img_link.split('.')[-1]
+          img.insert_before(new_img_tag)
+          img.decompose()
+          img_idx += 1
+        except:
+          print('error\n')
+          pass
 
-      self.resize_image(thumb_jpg_path)
+    if '<iframe' in art_content_string:
+      iframe = art_content.find_all('iframe')
+      for media_fram in iframe:
+        media_fram['height'] = "360"
+        media_fram['width']  = "100%"
+        media_fram['class']  = "wp-video"
 
-  
+    # if 'via' in art_content_string:
+    #   try:
+    #     via = art_content.find(string = re.compile('^[Vv][Ii][Aa]'))
+    #     print(via.parent)
+    #     # via.parent.decompose()
+    #   except:
+    #     pass
 
-    print(art_title)
-    # print(art_content)
+    art_content = str(art_content)
+    return art_content
+    
+  def publish_to_wordpress(self, art_category, art_title, art_content, thumb_jpg_link):
+    self.download_thumb_image(thumb_jpg_link)
+    print(self.post_id, self.url, art_category, art_title)
+    self.wp.auto_post_publish(self.wp_new_post, art_category, art_title, art_content, thumb_jpg_link)
 
-    resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
-    hello_funny_wp = WordPress('hello funny', 'Novia0829')
-    hello_funny_wp.auto_post_publish(str(art_title), str(art_content), resize_thumb_jpg_path)
+  def _empty_tag_attrs(self, art_content, tag_name):
+    for lbl in art_content.find_all(tag_name):
+      if lbl.text.lower() == 'via':
+        lbl.decompose()
+        continue
+      for k in list(lbl.attrs.keys()):
+        del lbl[k]
 
-  def insert_bloggerads(self, content):
-    ad_code = '\
-      <div style="float:none;margin:10px 0 10px 0;text-align:center;"> \
-        <ins style="display:inline-block"> \
-          <script src="http://js1.bloggerads.net/showbanner.aspx?blogid=20160315000013&amp;charset=utf-8" type="text/javascript"></script> \
-        </ins> \
-      </div>'
-    return ad_code + content
+  def download_image(self, img_url, save_name):
+    file_name = self.dir_name + "/" + save_name + '.' + img_url.split('.')[-1]
+    r = requests.get(img_url, headers = self.headers)
+    f = open(file_name, 'wb')
+    f.write(r.content)
+    f.close()
+    return file_name
+ 
+    
+  def download_thumb_image(self, img_url):
+    file_name = self.download_image(img_url, 'tmp_thumb')
+    self.resize_image(file_name)
 
-  def download_image(self, img_url, file_name):
-    image = requests.get(img_url)
-    if image.status_code != 200:
-      return 'FAILED'
-
-    with open(file_name, 'wb') as f:
-      f.write(image.content)
-      f.close()
-
-  def resize_image(self, img_path, height = 320, width = 200):
-    resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
+  def resize_image(self, img_path, width = 220, height = 220):
+    resize_thumb_jpg_path = self.dir_name + '/thumb.jpg'
     try:
-      with open(img_path, 'r+b') as f:
-        with Image.open(f) as image:
-          cover = resizeimage.resize_cover(image, [height, width])
-          cover.save(resize_thumb_jpg_path, image.format)
-          f.close()
-          os.remove(img_path)
+      fd_img = open(img_path, 'r+b')
+      img = Image.open(fd_img) 
+      img = resizeimage.resize_thumbnail(img, [height, width])
+      img.save(resize_thumb_jpg_path, img.format)
+      fd_img.close()
+      os.remove(img_path)
     except imageexceptions.ImageSizeError:
+      # shutil.copyfile(img_path, resize_thumb_jpg_path)
       os.renames(img_path, resize_thumb_jpg_path)
 
 def main():
-  # http://www.teepr.com/448487/edwardliu/
-  url = sys.argv[1]
+  if (len(sys.argv) != 2):
+    raise RuntimeError('input error. Usage as XXXX  \"teepr article url\"\n')
+
+  art_link = sys.argv[1]
+  art_count = 0
   craw = teepr()
-  craw.get_content(url)
-
-
-
-  # craw = teepr()
-  # url = 'http://teepr.com/%s/'
-  # for i in range(46921, 46926):
-  #   tmp = (url %(i))
-  #   print(tmp)
-  #   craw.get_content(tmp)
-  #   print('\n')
-
+  soup = craw.get_soup(art_link)
+  try:
+    art_title      = craw.get_title(soup)
+    art_category   = craw.get_category(soup)
+    post_id        = craw.get_wordpress_new_post_id()
+    art_thumb_link = craw.get_thumbnail_link(soup)
+    art_content    = craw.get_content(soup, post_id)
+    publish_status = craw.publish_to_wordpress(art_category, art_title, art_content, art_thumb_link)
+    print('No.%04d ==================================================\n' %(art_count))
+    art_count = art_count + 1
+    # time.sleep(25)
+  except Exception as exc:
+    print(exc)
+    pass
+  except:
+    print("something to wrong")
+    pass
 main()
