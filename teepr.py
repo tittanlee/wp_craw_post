@@ -20,7 +20,7 @@ import http.client
 class teepr:
 
   def __init__(self):
-    self.img_server_url = 'http://www.teepr.com/'
+    self.img_server_url = 'teepr.com'
     self.headers = {
             'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
     }
@@ -84,6 +84,7 @@ class teepr:
   def get_content(self, soup, article_id):
     art_content_string  = str()
     self.dir_name       = self.cwd + "/teepr/" + article_id
+    # self.dir_name       = '/home/tittanlee/public_html/wp-content/img/' + article_id
 
     if os.path.exists(self.dir_name):
       shutil.rmtree(self.dir_name)
@@ -140,7 +141,10 @@ class teepr:
         if (img.has_attr('data-original')):
           img_link = img['data-original']
         elif (img.has_attr('src')):
-          img_link =  img['src']
+          if self.img_server_url in img['src']:
+            img_link = img['src']
+          else:
+            img_link = 'http://pop.pimg.us/' + img['src']
 
         try:
           self.download_image(img_link, str(img_idx))
@@ -173,7 +177,7 @@ class teepr:
     return art_content
     
   def publish_to_wordpress(self, art_category, art_title, art_content, thumb_jpg_link):
-    self.download_thumb_image(thumb_jpg_link)
+    status = self.download_image(thumb_jpg_link, 'thumb')
     print(self.post_id, self.url, art_category, art_title)
     self.wp.auto_post_publish(self.wp_new_post, art_category, art_title, art_content, thumb_jpg_link)
 

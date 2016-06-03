@@ -25,12 +25,14 @@ class ptt01cc:
             'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
     }
 
+    self.post_id = 0
+    self.cwd = os.getcwd()
     self.wp = WordPress('http://www.dobee01.com', 'tittanlee', 'Novia0829')
     # self.wp = WordPress('http://www.dobee01.com', 'moneycome', 'Novia0829')
 
   def get_art_link_by_page(self, url_page):
     r = requests.get(url_page, headers = self.headers)
-    soup = BeautifulSoup(r.text, "lxml")
+    soup = BeautifulSoup(r.text, "html.parser")
     article_list = soup.find("div", id = "Article-list")
     for each_article in article_list.select(".thumb"):
       thumb_link = each_article.img['src']
@@ -42,7 +44,7 @@ class ptt01cc:
     self.url = url
     r = requests.get(url, headers = self.headers)
     r.encoding = 'utf-8'
-    soup = BeautifulSoup(r.text, 'lxml')
+    soup = BeautifulSoup(r.text, 'html.parser')
     return soup
 
   def get_title(self, soup):
@@ -73,7 +75,8 @@ class ptt01cc:
   
   def get_content(self, soup, article_id):
     art_content_string  = str()
-    self.dir_name       = "./ptt01cc/" + article_id
+    self.dir_name       = self.cwd + "/ptt01cc/" + article_id
+    # self.dir_name       = '/home/tittanlee/public_html/wp-content/img/' + article_id
 
     if os.path.exists(self.dir_name):
       shutil.rmtree(self.dir_name)
@@ -149,7 +152,7 @@ class ptt01cc:
       iframe = art_content.find_all('iframe')
       for media_fram in iframe:
         media_fram['height'] = "360"
-        media_fram['width']  = "80%"
+        media_fram['width']  = "100%"
         media_fram['class']  = "wp-video"
 
     # if 'via' in art_content_string:
@@ -164,8 +167,7 @@ class ptt01cc:
     return art_content
     
   def publish_to_wordpress(self, art_category, art_title, art_content, thumb_jpg_link):
-    resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
-    status = self.download_thumb_image(thumb_jpg_link)
+    status = self.download_image(thumb_jpg_link, 'thumb')
     print(self.post_id, self.url, art_category, art_title)
     self.wp.auto_post_publish(self.wp_new_post, art_category, art_title, art_content, thumb_jpg_link)
 
@@ -191,7 +193,7 @@ class ptt01cc:
     self.resize_image(file_name)
 
   def resize_image(self, img_path, width = 220, height = 220):
-    resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
+    resize_thumb_jpg_path = self.dir_name + '/thumb.jpg'
     try:
       fd_img = open(img_path, 'r+b')
       img = Image.open(fd_img) 
@@ -204,27 +206,27 @@ class ptt01cc:
       os.renames(img_path, resize_thumb_jpg_path)
 
 def main():
+  if (len(sys.argv) != 2):
+    raise RuntimeError('input error. Usage as XXXX  \'ptt01cc article url\'\n')
+ 
+  art_link   = sys.argv[1]
   craw = ptt01cc()
-  tmp_url   = 'http://ptt01.cc/post_{}'
-  art_count = 1
-  for idx in range(10100, 10200):
-    art_link   = tmp_url.format(idx)
-    soup = craw.get_soup(art_link)
-
-    try:
-      art_category   = craw.get_category(soup)
-      post_id        = craw.get_wordpress_new_post_id()
-      art_title      = craw.get_title(soup)
-      art_thumb_link = craw.get_thumbnail_link(soup)
-      art_content    = craw.get_content(soup, post_id)
-      publish_status = craw.publish_to_wordpress(art_category, art_title, art_content, art_thumb_link)
-      print('No.%04d ==================================================\n' %(art_count))
-      art_count = art_count + 1
-      time.sleep(25)
-    except Exception as exc:
-      print(exc)
-      pass
-    except:
-      print("something to wrong")
-      pass
+  art_count = 0
+  soup = craw.get_soup(art_link)
+  try:
+    art_title      = craw.get_title(soup)
+    art_category   = craw.get_category(soup)
+    post_id        = craw.get_wordpress_new_post_id()
+    art_thumb_link = craw.get_thumbnail_link(soup)
+    art_content    = craw.get_content(soup, post_id)
+    publish_status = craw.publish_to_wordpress(art_category, art_title, art_content, art_thumb_link)
+    print('No.%04d ==================================================\n' %(art_count))
+    art_count = art_count + 1
+    # time.sleep(25)
+  except Exception as exc:
+    print(exc)
+    pass
+  except:
+    print("something to wrong")
+    pass
 main()

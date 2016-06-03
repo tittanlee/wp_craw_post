@@ -84,6 +84,7 @@ class bomb01:
   def get_content(self, soup, article_id):
     art_content_string  = str()
     self.dir_name       = self.cwd + "/bomb01/" + article_id
+    # self.dir_name       = '/home/tittanlee/public_html/wp-content/img/' + article_id
 
     if os.path.exists(self.dir_name):
       shutil.rmtree(self.dir_name)
@@ -174,10 +175,10 @@ class bomb01:
     return art_content
     
   def publish_to_wordpress(self, art_category, art_title, art_content, thumb_jpg_link):
-    self.download_thumb_image(thumb_jpg_link)
+    status = self.download_image(thumb_jpg_link, 'thumb')
     print(self.post_id, self.url, art_category, art_title)
-    print(art_content)
-    # self.wp.auto_post_publish(self.wp_new_post, art_category, art_title, art_content, thumb_jpg_link)
+    # print(art_content)
+    self.wp.auto_post_publish(self.wp_new_post, art_category, art_title, art_content, thumb_jpg_link)
 
   def _empty_tag_attrs(self, art_content, tag_name):
     for lbl in art_content.find_all(tag_name):
@@ -217,29 +218,27 @@ def main():
   tmp_url   = 'http://www.bomb01.com/article/{}'
   art_count = 1
 
-  if (len(sys.argv) != 3):
-    raise RuntimeError('input error. Usage as XXXX  start end\n')
-  sys.argv[1:] = [int(x) for x in sys.argv[1:]]
-  file_name, start_number, end_number = sys.argv
+  if (len(sys.argv) != 2):
+    raise RuntimeError('input error. Usage as XXXX  article_id \n')
 
+  art_link   = sys.argv[1]
+  art_conunt = 0
   craw = bomb01()
-  for idx in range(start_number, end_number):
-    art_link   = tmp_url.format(idx)
-    soup = craw.get_soup(art_link)
-    try:
-      art_title      = craw.get_title(soup)
-      art_category   = craw.get_category(soup)
-      # post_id        = craw.get_wordpress_new_post_id()
-      # art_thumb_link = craw.get_thumbnail_link(soup)
-      # art_content    = craw.get_content(soup, post_id)
-      # publish_status = craw.publish_to_wordpress(art_category, art_title, art_content, art_thumb_link)
-      # print('No.%04d ==================================================\n' %(art_count))
-      # art_count = art_count + 1
-      # time.sleep(25)
-    except Exception as exc:
-      print(exc)
-      pass
-    except:
-      print("something to wrong")
-      pass
+  soup = craw.get_soup(art_link)
+  try:
+    art_title      = craw.get_title(soup)
+    art_category   = craw.get_category(soup)
+    post_id        = craw.get_wordpress_new_post_id()
+    art_thumb_link = craw.get_thumbnail_link(soup)
+    art_content    = craw.get_content(soup, post_id)
+    publish_status = craw.publish_to_wordpress(art_category, art_title, art_content, art_thumb_link)
+    print('No.%04d ==================================================\n' %(art_count))
+    art_count = art_count + 1
+    #time.sleep(25)
+  except Exception as exc:
+    print(exc)
+    pass
+  except:
+    print("something to wrong")
+    pass
 main()

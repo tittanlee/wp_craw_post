@@ -30,7 +30,7 @@ class againooo:
 
   def get_art_link_by_page(self, url_page):
     r = requests.get(url_page, headers = self.headers)
-    soup = BeautifulSoup(r.text, "lxml")
+    soup = BeautifulSoup(r.text, "html.parser")
     article_list = soup.find("div", id = "Article-list")
     for each_article in article_list.select(".thumb"):
       thumb_link = each_article.img['src']
@@ -45,7 +45,7 @@ class againooo:
     art_content_string  = str()
 
     r = requests.get(url, headers = self.headers)
-    soup = BeautifulSoup(r.text, 'lxml')
+    soup = BeautifulSoup(r.text, 'html.parser')
     art_title_string = soup.title.text
 
     # find category
@@ -69,7 +69,8 @@ class againooo:
         time.sleep(random.choice(range(30, 80)))
 
     article_id  = wp_new_post.id
-    self.dir_name       = "./againooo/" + article_id
+    #self.dir_name       = "./againooo/" + article_id
+    self.dir_name       = '/home/tittanlee/public_html/wp-content/img/' + article_id
 
     if os.path.exists(self.dir_name):
       shutil.rmtree(self.dir_name)
@@ -116,6 +117,8 @@ class againooo:
     PREFIX_WP_CONTENT_IMG_PATH = 'http://www.dobee01.com/wp-content/img/' + article_id + '/'
     if 'img' in art_content_string:
       for img in art_content.select('img'):
+        print(img)
+        input()
         if (img.has_attr('adonis-src')):
           img_link = self.img_server_url + img['adonis-src']
         elif (img.has_attr('src')):
@@ -151,7 +154,7 @@ class againooo:
     # print(art_content)
     
     try:
-      resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
+      resize_thumb_jpg_path = self.dir_name + '/thumb.jpg'
       status = self.download_thumb_image(thumb_link)
       self.wp.auto_post_publish(wp_new_post, art_category_string, art_title_string, art_content, resize_thumb_jpg_path)
     except:
@@ -179,7 +182,7 @@ class againooo:
     self.resize_image(file_name)
 
   def resize_image(self, img_path, width = 220, height = 220):
-    resize_thumb_jpg_path = './' + self.dir_name + '/thumb.jpg'
+    resize_thumb_jpg_path = self.dir_name + '/thumb.jpg'
     try:
       fd_img = open(img_path, 'r+b')
       img = Image.open(fd_img) 
@@ -213,7 +216,7 @@ def main():
   tmp_thumb = 'http://file.againooo.com/n%s/t_m.jpg'
   art_count = 1
   # for idx in range(56408, 56500):
-  for idx in range(54304, 54305):
+  for idx in range(56624, 56625):
     art_link   = (tmp_url %(idx))
     thumb_link = (tmp_thumb %(idx))
     status = craw.get_content(art_link, thumb_link)
