@@ -7,7 +7,7 @@ from PIL import Image
 from resizeimage import resizeimage
 from resizeimage import imageexceptions
 
-from auto_post import *
+from CrawScripts.auto_post import *
 import shutil
 import re
 
@@ -17,12 +17,12 @@ import string
 import random
 import http.client
 
-class teepr:
+class base_craw:
 
-  def __init__(self):
-    self.img_server_url = 'teepr.com'
+  def __init__(self, url):
+    self.url = url
     self.headers = {
-            'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
+      'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
     }
 
     self.post_id = 0
@@ -39,11 +39,13 @@ class teepr:
       yield art_link, thumb_link
       # print(art_link, " = ",  thumb_path)
 
-  def get_soup(self, url):
-    self.url = url
-    r = requests.get(url, headers = self.headers)
+  def get_soup(self):
+    r = requests.get(self.url, headers = self.headers)
     r.encoding = 'utf-8'
-    soup = BeautifulSoup(r.text, 'html.parser')
+    try:
+      soup = BeautifulSoup(r.text, 'lxml')
+    except:
+      soup = BeautifulSoup(r.text, 'html.parser')
     return soup
 
   def get_title(self, soup):
@@ -81,9 +83,10 @@ class teepr:
     self.post_id  = self.wp_new_post.id
     return self.post_id
   
-  def get_content(self, soup, article_id):
+  def get_content(self, soup):
     art_content_string  = str()
-    self.dir_name       = self.cwd + "/teepr/" + article_id
+    article_id = self.get_wordpress_new_post_id()
+    self.dir_name       = self.cwd + "/base_craw/" + article_id
     # self.dir_name       = '/home/tittanlee/public_html/wp-content/img/' + article_id
 
     if os.path.exists(self.dir_name):
@@ -91,8 +94,7 @@ class teepr:
     os.makedirs(self.dir_name)
 
     # To find article content
-
-    art_content = soup.find('div', class_="post-single-content box mark-links")
+    art_content = soup.find('div', id='content')
     art_content_string = str(art_content)
 
     # Remove html comment
@@ -100,16 +102,16 @@ class teepr:
       element.extract()
 
     # Remove google ad.
-    for ads_google in art_content.find_all(class_ = re.compile('adsbygoogle')):
+    for ads_google in art_content.find_all('div', class_ = 'centerBlock'):
       ads_google.decompose()
     
+    # Remove another Ads
+    for ads in art_content.find_all(id = re.compile("[aA][dD][sS]")):
+      ads.unwrap()
+
     # remove all text/javascript
     for javascript in art_content.find_all('script', type="text/javascript"):
       javascript.decompose()
-
-    # remove div class="ad-inserter"
-    for ads in art_content.find_all('div', class_ = "ad-inserter"):
-      ads.decompose()
 
     # remove all "div-mobile-inread"
     for mobile_inread in art_content.find_all('div', id="div-mobile-inread"):
@@ -141,13 +143,11 @@ class teepr:
         if (img.has_attr('data-original')):
           img_link = img['data-original']
         elif (img.has_attr('src')):
-          if self.img_server_url in img['src']:
-            img_link = img['src']
-          else:
-            img_link = 'http://pop.pimg.us/' + img['src']
+          img_link =  self.img_server_url + img['src']
 
         try:
-          self.download_image(img_link, str(img_idx))
+          file_name = self.dir_name + "/" + str(img_idx) + '.' + img_url.split('.')[-1]
+          self.download_image(img_link, file_name)
           new_img_tag = soup.new_tag("img")    
           new_img_tag['class'] = 'aligncenter'
           new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.' + img_link.split('.')[-1]
@@ -177,8 +177,9 @@ class teepr:
     return art_content
     
   def publish_to_wordpress(self, art_category, art_title, art_content, thumb_jpg_link):
-    status = self.download_image(thumb_jpg_link, 'thumb')
+    status = self.download_image(thumb_jpg_link, self.dir_name + '/' + 'thumb.jpg')
     print(self.post_id, self.url, art_category, art_title)
+    print(art_content)
     self.wp.auto_post_publish(self.wp_new_post, art_category, art_title, art_content, thumb_jpg_link)
 
   def _empty_tag_attrs(self, art_content, tag_name):
@@ -190,14 +191,13 @@ class teepr:
         del lbl[k]
 
   def download_image(self, img_url, save_name):
-    file_name = self.dir_name + "/" + save_name + '.' + img_url.split('.')[-1]
+    file_name = save_name
     r = requests.get(img_url, headers = self.headers)
     f = open(file_name, 'wb')
     f.write(r.content)
     f.close()
     return file_name
  
-    
   def download_thumb_image(self, img_url):
     file_name = self.download_image(img_url, 'tmp_thumb')
     self.resize_image(file_name)
@@ -215,28 +215,3 @@ class teepr:
       # shutil.copyfile(img_path, resize_thumb_jpg_path)
       os.renames(img_path, resize_thumb_jpg_path)
 
-def main():
-  if (len(sys.argv) != 2):
-    raise RuntimeError('input error. Usage as XXXX  \"teepr article url\"\n')
-
-  art_link = sys.argv[1]
-  art_count = 0
-  craw = teepr()
-  soup = craw.get_soup(art_link)
-  try:
-    art_title      = craw.get_title(soup)
-    art_category   = craw.get_category(soup)
-    post_id        = craw.get_wordpress_new_post_id()
-    art_thumb_link = craw.get_thumbnail_link(soup)
-    art_content    = craw.get_content(soup, post_id)
-    publish_status = craw.publish_to_wordpress(art_category, art_title, art_content, art_thumb_link)
-    print('No.%04d ==================================================\n' %(art_count))
-    art_count = art_count + 1
-    # time.sleep(25)
-  except Exception as exc:
-    print(exc)
-    pass
-  except:
-    print("something to wrong")
-    pass
-main()

@@ -12,7 +12,7 @@ class WordPress:
 
   def __init__(self, site, username, password):
     self.wp = Client( site + '/xmlrpc.php', username, password)
-    self.categories = self.wp.call(taxonomies.GetTerms('category'))
+    self.categories = self.wp.call(taxonomies.GetTaxonomy('category'))
 
   def request_new_post(self):
     self.post = self.wp.call(GetPosts({'post_status': 'draft'}))

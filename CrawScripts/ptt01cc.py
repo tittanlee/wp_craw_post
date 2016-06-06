@@ -1,55 +1,9 @@
-import requests
-from bs4 import BeautifulSoup, Comment
-import sys, os
+from CrawScripts.base_craw import *
 
-# image resize lib
-from PIL import Image
-from resizeimage import resizeimage
-from resizeimage import imageexceptions
+class ptt01cc(base_craw):
 
-from auto_post import *
-import shutil
-import re
-
-import urllib.request
-import time
-import string
-import random
-import http.client
-
-class ptt01cc:
-
-  def __init__(self):
-    self.img_server_url = 'http://file.ptt01cc.com/'
-    self.headers = {
-            'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
-    }
-
-    self.post_id = 0
-    self.cwd = os.getcwd()
-    self.wp = WordPress('http://www.dobee01.com', 'tittanlee', 'Novia0829')
-    # self.wp = WordPress('http://www.dobee01.com', 'moneycome', 'Novia0829')
-
-  def get_art_link_by_page(self, url_page):
-    r = requests.get(url_page, headers = self.headers)
-    soup = BeautifulSoup(r.text, "html.parser")
-    article_list = soup.find("div", id = "Article-list")
-    for each_article in article_list.select(".thumb"):
-      thumb_link = each_article.img['src']
-      art_link   = each_article['href']
-      yield art_link, thumb_link
-      # print(art_link, " = ",  thumb_path)
-
-  def get_soup(self, url):
-    self.url = url
-    r = requests.get(url, headers = self.headers)
-    r.encoding = 'utf-8'
-    soup = BeautifulSoup(r.text, 'html.parser')
-    return soup
-
-  def get_title(self, soup):
-    title = soup.find('meta', property="og:title")['content']
-    return title
+  def __init__(self, url):
+    base_craw.__init__(self, url)
 
   def get_category(self, soup):
     try:
@@ -63,19 +17,11 @@ class ptt01cc:
       return category
     except:
       raise Exception("INVALID_CATEGORY")
-
-  def get_thumbnail_link(self, soup):
-    thumb_link = soup.find('meta', property="og:image")['content']
-    return thumb_link
-  
-  def get_wordpress_new_post_id(self):
-    self.wp_new_post = self.wp.request_new_post()
-    self.post_id  = self.wp_new_post.id
-    return self.post_id
-  
-  def get_content(self, soup, article_id):
+	  
+  def get_content(self, soup):
     art_content_string  = str()
-    self.dir_name       = self.cwd + "/ptt01cc/" + article_id
+    article_id          = self.get_wordpress_new_post_id()
+    self.dir_name       = self.cwd + '/' + article_id
     # self.dir_name       = '/home/tittanlee/public_html/wp-content/img/' + article_id
 
     if os.path.exists(self.dir_name):
@@ -91,9 +37,8 @@ class ptt01cc:
       element.extract()
 
     # Remove google ad.
-    if 'google' in art_content_string:
-      for ads_google in art_content.find_all('div', class_ = 'centerBlock'):
-          ads_google.decompose()
+    for ads_google in art_content.find_all(class_ = re.compile('adsbygoogle')):
+      ads_google.decompose()
     
     # Remove another Ads
     if 'ads' in art_content_string:
@@ -136,8 +81,9 @@ class ptt01cc:
         elif (img.has_attr('src')):
           img_link =  img['src']
 
+        file_name = self.dir_name + "/" + str(img_idx) + '.' + img_link.split('.')[-1]
         try:
-          self.download_image(img_link, str(img_idx))
+          self.download_image(img_link, file_name)
           new_img_tag = soup.new_tag("img")    
           new_img_tag['class'] = 'aligncenter'
           new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.' + img_link.split('.')[-1]
@@ -145,7 +91,7 @@ class ptt01cc:
           img.decompose()
           img_idx += 1
         except:
-          print('error\n')
+          print('Download image error', img_link, file_name)
           pass
 
     if '<iframe' in art_content_string:
@@ -166,45 +112,6 @@ class ptt01cc:
     art_content = str(art_content)
     return art_content
     
-  def publish_to_wordpress(self, art_category, art_title, art_content, thumb_jpg_link):
-    status = self.download_image(thumb_jpg_link, 'thumb')
-    print(self.post_id, self.url, art_category, art_title)
-    self.wp.auto_post_publish(self.wp_new_post, art_category, art_title, art_content, thumb_jpg_link)
-
-  def _empty_tag_attrs(self, art_content, tag_name):
-    for lbl in art_content.find_all(tag_name):
-      if lbl.text.lower() == 'via':
-        lbl.decompose()
-        continue
-      for k in list(lbl.attrs.keys()):
-        del lbl[k]
-
-  def download_image(self, img_url, save_name):
-    file_name = self.dir_name + "/" + save_name + '.' + img_url.split('.')[-1]
-    r = requests.get(img_url, headers = self.headers)
-    f = open(file_name, 'wb')
-    f.write(r.content)
-    f.close()
-    return file_name
- 
-    
-  def download_thumb_image(self, img_url):
-    file_name = self.download_image(img_url, 'tmp_thumb')
-    self.resize_image(file_name)
-
-  def resize_image(self, img_path, width = 220, height = 220):
-    resize_thumb_jpg_path = self.dir_name + '/thumb.jpg'
-    try:
-      fd_img = open(img_path, 'r+b')
-      img = Image.open(fd_img) 
-      img = resizeimage.resize_thumbnail(img, [height, width])
-      img.save(resize_thumb_jpg_path, img.format)
-      fd_img.close()
-      os.remove(img_path)
-    except imageexceptions.ImageSizeError:
-      # shutil.copyfile(img_path, resize_thumb_jpg_path)
-      os.renames(img_path, resize_thumb_jpg_path)
-
 def main():
   if (len(sys.argv) != 2):
     raise RuntimeError('input error. Usage as XXXX  \'ptt01cc article url\'\n')
@@ -229,4 +136,3 @@ def main():
   except:
     print("something to wrong")
     pass
-main()
