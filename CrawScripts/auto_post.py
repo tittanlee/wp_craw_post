@@ -19,6 +19,10 @@ class WordPress:
     if len(self.post):
       return self.post[-1]
 
+    self.post = self.wp.call(GetPosts({'post_status': 'auto-draft'}))
+    if len(self.post):
+      return self.post[-1]
+
     self.post    = WordPressPost()
     self.post.id = self.wp.call(NewPost(self.post))
     return self.post

@@ -33,9 +33,8 @@ class toments(base_craw):
       ads.unwrap()
 
     # remove all text/javascript
-    for javascript in art_content.find_all('script', type="text/javascript"):
+    for javascript in art_content.find_all('script'):
       javascript.decompose()
-
 
     # remove <p>
     self._empty_tag_attrs(art_content, 'p')
