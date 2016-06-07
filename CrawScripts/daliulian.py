@@ -3,7 +3,7 @@ from CrawScripts.base_craw import *
 class daliulian(base_craw):
   def __init__(self, url):
     base_craw.__init__(self, url)
-    self.img_server_url = 'http://file.againooo.com/'
+    self.img_server_url = 'http://ww.daliulian.net/'
 
   def get_content(self, soup):
     art_content_string  = str()
@@ -15,9 +15,8 @@ class daliulian(base_craw):
       shutil.rmtree(self.dir_name)
     os.makedirs(self.dir_name)
 
-
     # To find article content
-    art_content = soup.find('div', class_="Content_post")
+    art_content = soup.find('div', id = 'article-content')
     art_content_string = str(art_content)
 
     # Remove html comment
@@ -25,7 +24,7 @@ class daliulian(base_craw):
       element.extract()
 
     # Remove google ad.
-    for ads_google in art_content.find_all(class_ = re.compile('adsbygoogle')):
+    for ads_google in art_content.find_all('div', class_=re.compile("adsDiv")):
       ads_google.decompose()
     
     # Remove another Ads
@@ -33,7 +32,7 @@ class daliulian(base_craw):
       ads.unwrap()
 
     # remove all text/javascript
-    for javascript in art_content.find_all('script', type="text/javascript"):
+    for javascript in art_content.find_all('script'):
       javascript.decompose()
 
 
@@ -65,17 +64,19 @@ class daliulian(base_craw):
         elif (img.has_attr('src')):
           img_link =  img['src']
 
+        file_name = self.dir_name + "/" + str(img_idx) + '.jpg' 
+        if (img_link.startswith('/')):
+          img_link = self.img_server_url + img_link
         try:
-          file_name = self.dir_name + "/" + str(img_idx) + '.' + img_link.split('.')[-1]
           self.download_image(img_link, file_name)
           new_img_tag = soup.new_tag("img")    
           new_img_tag['class'] = 'aligncenter'
-          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.' + img_link.split('.')[-1]
+          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.jpg'
           img.insert_before(new_img_tag)
           img.decompose()
           img_idx += 1
         except:
-          print('error\n')
+          print('download image error, filename = ', file_name, ', image_link = ', img_link)
           pass
 
 

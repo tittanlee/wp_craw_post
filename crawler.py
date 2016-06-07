@@ -12,6 +12,8 @@ def get_instance_of_crawler_class(url):
     craw = pixnet.pixnet(url)
   elif 'toments' in url:
     craw = toments.toments(url)
+  elif 'daliulian' in url:
+    craw = daliulian.daliulian(url)
   else:
     raise RuntimeError('Get Crawler instance error', url, 'not supported')
   return craw
