@@ -4,6 +4,8 @@ __all__ = ['bomb01',
            'pixnet',
            'toments',
            'daliulian',
+           'buzzlife',
+           'buzzhand',
 
            
            

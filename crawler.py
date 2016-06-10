@@ -14,6 +14,10 @@ def get_instance_of_crawler_class(url):
     craw = toments.toments(url)
   elif 'daliulian' in url:
     craw = daliulian.daliulian(url)
+  elif 'buzzlife' in url:
+    craw = buzzlife.buzzlife(url)
+  elif 'buzzhand' in url:
+    craw = buzzhand.buzzhand(url)
   else:
     raise RuntimeError('Get Crawler instance error', url, 'not supported')
   return craw
