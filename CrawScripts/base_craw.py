@@ -145,8 +145,12 @@ class base_craw:
         elif (img.has_attr('src')):
           img_link =  self.img_server_url + img['src']
 
+        if '.gif' in img_link:
+          file_name = self.dir_name + "/" + str(img_idx) + '.gif'
+        else:
+          file_name = self.dir_name + "/" + str(img_idx) + '.jpg'
+
         try:
-          file_name = self.dir_name + "/" + str(img_idx) + '.' + img_url.split('.')[-1]
           self.download_image(img_link, file_name)
           new_img_tag = soup.new_tag("img")    
           new_img_tag['class'] = 'aligncenter'

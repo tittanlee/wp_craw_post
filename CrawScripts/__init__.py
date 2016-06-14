@@ -6,6 +6,7 @@ __all__ = ['bomb01',
            'daliulian',
            'buzzlife',
            'buzzhand',
+           'gjoyz',
 
            
            
