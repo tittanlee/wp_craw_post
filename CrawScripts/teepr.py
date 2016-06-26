@@ -62,6 +62,10 @@ class teepr(base_craw):
     img_idx = 1
     if 'img' in art_content_string:
       for img in art_content.select('img'):
+        img_parent = img.parent
+        if (img_parent.has_attr('href')):
+          img_parent.unwrap()
+
         if (img.has_attr('data-original')):
           img_link = img['data-original']
         elif (img.has_attr('src')):

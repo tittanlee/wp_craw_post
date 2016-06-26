@@ -3,7 +3,7 @@ from CrawScripts.base_craw import *
 class daliulian(base_craw):
   def __init__(self, url):
     base_craw.__init__(self, url)
-    self.img_server_url = 'http://ww.daliulian.net/'
+    self.img_server_url = 'http://tw.daliulian.net/'
 
   def get_content(self, soup):
     art_content_string  = str()
