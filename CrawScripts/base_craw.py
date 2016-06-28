@@ -26,7 +26,7 @@ class base_craw:
     }
 
     self.post_id = 0
-    self.cwd = os.getcwd()
+    self.cwd = os.getcwd() + '/img'
     self.wp = WordPress('http://www.dobee01.com', 'tittanlee', 'Novia0829')
 
   def get_art_link_by_page(self, url_page):
