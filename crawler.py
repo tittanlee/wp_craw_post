@@ -22,6 +22,8 @@ def get_instance_of_crawler_class(url):
     craw = gjoyz.gjoyz(url)
   elif 'fooding' in url:
     craw = fooding.fooding(url)
+  elif 'coco01' in url:
+    craw = coco01.coco01(url)
   else:
     raise RuntimeError('Get Crawler instance error', url, 'not supported')
   return craw
