@@ -17,6 +17,8 @@ class buzzhand(base_craw):
 
     # To find article content
     art_content = soup.find('div', id='articleContent')
+    for k in list(art_content.attrs.keys()):
+      del art_content[k]
     art_content_string = str(art_content)
 
     # Remove html comment

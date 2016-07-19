@@ -17,6 +17,8 @@ class coco01(base_craw):
 
     # To find article content
     art_content = soup.find('div', class_="post-html")
+    for k in list(art_content.attrs.keys()):
+      del art_content[k]
     art_content_string = str(art_content)
 
     # Remove html comment
@@ -69,14 +71,14 @@ class coco01(base_craw):
         if (img.has_attr('data-original')):
           img_link = img['data-original']
         elif (img.has_attr('src')):
-            img_link = img['src']
+          img_link = img['src']
 
         try:
-          file_name = self.dir_name + "/" + str(img_idx) + '.' + img_link.split('.')[-1]
+          file_name = self.dir_name + "/" + str(img_idx) + '.jpg' 
           self.download_image(img_link, file_name)
           new_img_tag = soup.new_tag("img")    
           new_img_tag['class'] = 'aligncenter'
-          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.' + img_link.split('.')[-1]
+          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.jpg' 
           img.insert_before(new_img_tag)
           img.decompose()
           img_idx += 1

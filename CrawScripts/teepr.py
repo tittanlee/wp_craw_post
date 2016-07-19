@@ -17,6 +17,8 @@ class teepr(base_craw):
 
     # To find article content
     art_content = soup.find('div', class_="post-single-content box mark-links")
+    for k in list(art_content.attrs.keys()):
+      del art_content[k]
     art_content_string = str(art_content)
 
     # Remove html comment
@@ -69,10 +71,7 @@ class teepr(base_craw):
         if (img.has_attr('data-original')):
           img_link = img['data-original']
         elif (img.has_attr('src')):
-          if 'teepr' in img['src']:
-            img_link = img['src']
-          else:
-            img_link = 'http://pop.pimg.us/' + img['src']
+          img_link = img['src']
 
         try:
           file_name = self.dir_name + "/" + str(img_idx) + '.' + img_link.split('.')[-1]
