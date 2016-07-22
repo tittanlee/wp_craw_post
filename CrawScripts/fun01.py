@@ -1,10 +1,9 @@
 from CrawScripts.base_craw import *
 
-class circle01(base_craw):
+class fun01(base_craw):
 
   def __init__(self, url):
     base_craw.__init__(self, url)
-    self.base_url = 'http://ww.circle01.com/'
 
   def get_content(self, soup):
     art_content_string  = str()
@@ -17,7 +16,7 @@ class circle01(base_craw):
     os.makedirs(self.dir_name)
 
     # To find article content
-    art_content = soup.find('div', id="article-content")
+    art_content = soup.find('div', id="detailMain")
     for k in list(art_content.attrs.keys()):
       del art_content[k]
     art_content_string = str(art_content)
@@ -31,11 +30,11 @@ class circle01(base_craw):
       ads_google.decompose()
     
     # remove all text/javascript
-    for javascript in art_content.find_all('script'):
+    for javascript in art_content.find_all('script', type="text/javascript"):
       javascript.decompose()
 
     # remove div class="ad-inserter"
-    for ads in art_content.find_all('div', class_ = "ad-inserter"):
+    for ads in art_content.find_all('div', class_ = "ui_adblock"):
       ads.decompose()
 
     # remove all "div-mobile-inread"
@@ -72,17 +71,14 @@ class circle01(base_craw):
         if (img.has_attr('data-original')):
           img_link = img['data-original']
         elif (img.has_attr('src')):
-          img_link = img['src']
-
-        if not img_link.startswith("http"):
-          img_link = self.base_url + img_link
+            img_link = img['src']
 
         try:
-          file_name = self.dir_name + "/" + str(img_idx) + '.' + img_link.split('.')[-1]
+          file_name = self.dir_name + "/" + str(img_idx) + '.jpg' 
           self.download_image(img_link, file_name)
           new_img_tag = soup.new_tag("img")    
           new_img_tag['class'] = 'aligncenter'
-          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.' + img_link.split('.')[-1]
+          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.jpg'
           img.insert_before(new_img_tag)
           img.decompose()
           img_idx += 1
