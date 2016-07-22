@@ -43,7 +43,7 @@ class base_craw:
     r = requests.get(self.url, headers = self.headers)
     r.encoding = 'utf-8'
     try:
-      soup = BeautifulSoup(r.text, 'lxml')
+      soup = BeautifulSoup(r.text, 'html5lib')
     except:
       soup = BeautifulSoup(r.text, 'html.parser')
     return soup
