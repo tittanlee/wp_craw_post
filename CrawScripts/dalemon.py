@@ -1,9 +1,14 @@
 from CrawScripts.base_craw import *
 
-class coco01(base_craw):
-
+class dalemon(base_craw):
   def __init__(self, url):
     base_craw.__init__(self, url)
+    self.img_server_url = 'http://tw.daliulian.net/'
+
+  def get_title(self, soup):
+    self.title = base_craw.get_title(self, soup)
+    self.title = re.sub(' \| 鍵盤大檸檬 \| ETtoday東森新聞雲', '', self.title)
+    return self.title
 
   def get_content(self, soup):
     art_content_string  = str()
@@ -16,7 +21,7 @@ class coco01(base_craw):
     os.makedirs(self.dir_name)
 
     # To find article content
-    art_content = soup.find('div', class_="post-html")
+    art_content = soup.find('div', class_='story')
     for k in list(art_content.attrs.keys()):
       del art_content[k]
     art_content_string = str(art_content)
@@ -26,20 +31,22 @@ class coco01(base_craw):
       element.extract()
 
     # Remove google ad.
-    for ads_google in art_content.find_all(string=re.compile('adsbygoogle|sponsored')):
-      ads_google.parent.decompose()
+    for ads_google in art_content.find_all('div', class_=re.compile("adsDiv")):
+      ads_google.decompose()
     
+    # Remove another Ads
+    for ads in art_content.find_all(id = re.compile("[aA][dD][sS]")):
+      ads.unwrap()
+
     # remove all text/javascript
-    for javascript in art_content.find_all('script', type="text/javascript"):
+    for javascript in art_content.find_all('script'):
       javascript.decompose()
 
-    # remove div class="ad-inserter"
-    for ads in art_content.find_all('div', class_ = "ad-inserter"):
-      ads.decompose()
-
-    # remove all "div-mobile-inread"
-    for mobile_inread in art_content.find_all('div', id="div-mobile-inread"):
-      mobile_inread.decompose()
+    # remove all href link with dalemon
+    for a_href in art_content.find_all('a'):
+      link = a_href['href']
+      if 'dalemon' in link:
+        a_href.decompose()
 
     # remove <p>
     self._empty_tag_attrs(art_content, 'p')
@@ -59,32 +66,33 @@ class coco01(base_craw):
     # remove section
     self._empty_tag_attrs(art_content, 'section')
 
+
+
     # replace img class setting.
     PREFIX_WP_CONTENT_IMG_PATH = 'http://www.dobee01.com/wp-content/img/' + article_id + '/'
     img_idx = 1
     if 'img' in art_content_string:
       for img in art_content.select('img'):
-        img_parent = img.parent
-        if (img_parent.has_attr('href')):
-          img_parent.unwrap()
-
-        if (img.has_attr('data-original')):
-          img_link = img['data-original']
+        if (img.has_attr('adonis-src')):
+          img_link = self.img_server_url + img['adonis-src']
         elif (img.has_attr('src')):
-          img_link = img['src']
+          img_link =  img['src']
 
+        file_name = self.dir_name + "/" + str(img_idx) + '.jpg' 
+        if (img_link.startswith('/')):
+          img_link = self.img_server_url + img_link
         try:
-          file_name = self.dir_name + "/" + str(img_idx) + '.jpg' 
           self.download_image(img_link, file_name)
           new_img_tag = soup.new_tag("img")    
           new_img_tag['class'] = 'aligncenter'
-          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.jpg' 
+          new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.jpg'
           img.insert_before(new_img_tag)
           img.decompose()
           img_idx += 1
         except:
-          print('error\n')
+          print('download image error, filename = ', file_name, ', image_link = ', img_link)
           pass
+
 
     if '<iframe' in art_content_string:
       iframe = art_content.find_all('iframe')
@@ -96,8 +104,7 @@ class coco01(base_craw):
     # if 'via' in art_content_string:
     #   try:
     #     via = art_content.find(string = re.compile('^[Vv][Ii][Aa]'))
-    #     print(via.parent)
-    #     # via.parent.decompose()
+    #     via.parent.decompose()
     #   except:
     #     pass
 
