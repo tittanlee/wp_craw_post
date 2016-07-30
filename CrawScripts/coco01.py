@@ -79,6 +79,7 @@ class coco01(base_craw):
           new_img_tag = soup.new_tag("img")    
           new_img_tag['class'] = 'aligncenter'
           new_img_tag['src']   = PREFIX_WP_CONTENT_IMG_PATH + str(img_idx) + '.jpg' 
+          new_img_tag['alt']   = self.title + ' - Dobee01 - So Funny So Easy -'
           img.insert_before(new_img_tag)
           img.decompose()
           img_idx += 1
